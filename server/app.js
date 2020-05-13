@@ -6,27 +6,50 @@ var logger = require('morgan');
 var http = require('http');
 var socketIo = require("socket.io");
 
+// some hacky stuff for now that sets up socket namespacing and rooms
+rooms = {}
+  
+// users = 0;
+// IdToName = {}
+
+
 // create express app
 var app = express();
 
 // create HTTP server with socketIO
 var server = http.createServer(app);
 var io = socketIo(server);
+
 io.on("connection", socket => {
 
   let previousId;
-  const safeJoin = currentId => {
+  const safeJoin = (currentId, name) => {
     socket.leave(previousId);
     socket.join(currentId);
+    if(currentId in rooms){
+        rooms[currentId].push(name)
+    }
+    else{
+        rooms[currentId] = [name]
+    }
+
+    if(previousId){
+        let index = rooms[previousId].indexOf(name)
+        rooms[previousId].splice(index, 1)
+    }
+
     previousId = currentId;
   };
 
   console.log("new socket IO");
-  socket.on("join", room => {
-    safeJoin(room);
+  socket.on("join", (room, name) => {
+    safeJoin(room, name);
+
   });
 
 });
+
+io.on('disconnect', socket)
 // makes io available as req.io in all request handlers
 // must be placed BEFORE all request handlers
 app.use(function (req, res, next) {
@@ -39,16 +62,13 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var testRouter = require('./routes/test');
 
-// some hacky stuff for now that sets up socket namespacing and rooms
-rooms = {
-  '1': {},
-  '2': {}
-}
+
 // send updates to all sockets in the rooms every second
 setInterval(function () {
   for (const id in rooms) {
     io.to(`${id}`).emit('update', `in room ${id}`);
     console.log("sent update");
+    console.log(rooms)
   }
 }, 1000);
 
