@@ -10,17 +10,15 @@ class App extends Component {
     super();
     this.state = {
       endpoint: "localhost:9000",
-      socket: null,
-      userid: null
+      socket: null
     };
   }
 
   componentDidMount = () => {
     const socket = socketIOClient(this.state.endpoint);
     this.setState({socket: socket})
-    socket.on('update', (text, userId) => {
+    socket.on('update', (text) => {
       console.log(`${text}`);
-      this.setState({userid: userId})
     })
   }
 
