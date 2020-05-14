@@ -10,7 +10,7 @@ var socketIo = require("socket.io");
 rooms = {}
   
 // users = 0;
-// IdToName = {}
+socketId_to_name = {}
 
 
 // create express app
@@ -25,7 +25,8 @@ io.on("connection", socket => {
   let previousId;
   const safeJoin = (currentId, name) => {
     socket.leave(previousId);
-    socket.join(currentId);
+    socket.join(currentId); 
+    socketId_to_name[socket.id] = {"name": name, "socket": socket, "room": currentId};
     if(currentId in rooms){
         rooms[currentId].push(name)
     }
@@ -47,9 +48,20 @@ io.on("connection", socket => {
 
   });
 
+  socket.on('disconnect', () => {
+    console.log(`${socket.id}` + " disconnected")
+    let room = socketId_to_name[socket.id].room;
+    let name = socketId_to_name[socket.id].name;
+    delete socketId_to_name[socket.id];
+    let index = rooms[room].indexOf(name)
+    rooms[room].splice(index, 1)
+  }
+  );
+
+
 });
 
-io.on('disconnect', socket)
+
 // makes io available as req.io in all request handlers
 // must be placed BEFORE all request handlers
 app.use(function (req, res, next) {
@@ -69,6 +81,7 @@ setInterval(function () {
     io.to(`${id}`).emit('update', `in room ${id}`);
     console.log("sent update");
     console.log(rooms)
+    console.log(socketId_to_name);
   }
 }, 1000);
 
