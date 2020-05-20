@@ -21,7 +21,7 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIo(server);
 
-io.on("connection", socket => {
+io.on("connection", socket => {//player joining
 
   let previousId;
   const safeJoin = (currentId, name) => {
@@ -50,7 +50,7 @@ io.on("connection", socket => {
     // Sending new list of players to all players, assumes namespace set up
     const nsp = io.of('/rooms/:' + `${currentId}`); //connect player to namespace (the url contact.com/rooms/:id)
     nsp.emit('update', `in room ${currentId}`);
-    nsp.emit(rooms[currentId]); //emits list of players in the namespace
+    nsp.emit('players-update',rooms[currentId]); //emits list of players in the namespace
   
   
   };
@@ -61,7 +61,21 @@ io.on("connection", socket => {
 
   });
 
-  socket.on('disconnect', () => {//player leaving site (assume leaving game)
+
+  //When player edits name
+  socket.on("edit_name",(room,name) => {
+    //update rooms, replace name
+    let index = rooms[room].indexOf(name) 
+    rooms[room].splice(index, 1,"name")
+
+    const nsp = io.of('/rooms/:' + `${room}`); //connect player to namespace (the url contact.com/rooms/:id)
+    nsp.emit('update', `in room ${room}`);
+    nsp.emit('players-update',rooms[room]); //emits list of players in the namespace
+
+  });
+
+  //Player leaves game (leaving site)
+  socket.on('disconnect', () => {
     console.log(`${socket.id}` + " disconnected")
     //update players list for all players in room 
 
@@ -72,7 +86,7 @@ io.on("connection", socket => {
 
     const nsp = io.of('/rooms/:' + `${room}`); //connect player to namespace (the url contact.com/rooms/:id)
     nsp.emit('update', `in room ${room}`);
-    nsp.emit(rooms[room]); //emits list of players in the namespace
+    nsp.emit('players-update',rooms[room]); //emits list of players in the namespace
 
     delete socketId_to_name[socket.id]; //update socket dictionary
     //update room dictionary
@@ -80,6 +94,8 @@ io.on("connection", socket => {
     rooms[room].splice(index, 1)
   }
   );
+
+
 
 
 });
@@ -107,11 +123,6 @@ setInterval(function () {
     console.log(socketId_to_name);
   }
 }, 1000);
-
-/**
- * Snig's work
- * Send updates to every socket in room every time list of players change for that room
- */
 
 
 
