@@ -7,9 +7,10 @@ var http = require('http');
 var socketIo = require("socket.io");
 
 // some hacky stuff for now that sets up socket namespacing and rooms
+// key: id value: list of clients
 rooms = {}
   
-// users = 0;
+// key: socket id, value: socket
 socketId_to_name = {}
 
 
@@ -27,19 +28,31 @@ io.on("connection", socket => {
     socket.leave(previousId);
     socket.join(currentId); 
     socketId_to_name[socket.id] = {"name": name, "socket": socket, "room": currentId};
-    if(currentId in rooms){
+
+
+
+    if(currentId in rooms){ //player joining room
         rooms[currentId].push(name)
+
+        
     }
-    else{
+    else{ //player joining empty room (for now create a new room)
         rooms[currentId] = [name]
+        //TODO: check if room exists else send out error message
+
     }
 
-    if(previousId){
+    if(previousId){ //if previous id exists
         let index = rooms[previousId].indexOf(name)
-        rooms[previousId].splice(index, 1)
+        rooms[previousId].splice(index, 1) //remove from that room
     }
 
-    previousId = currentId;
+    // Sending new list of players to all players, assumes namespace set up
+    const nsp = io.of('/rooms/:' + `${currentId}`); //connect player to namespace (the url contact.com/rooms/:id)
+    nsp.emit('update', `in room ${currentId}`);
+    nsp.emit(rooms[currentId]); //emits list of players in the namespace
+  
+  
   };
 
   console.log("new socket IO");
@@ -48,12 +61,22 @@ io.on("connection", socket => {
 
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', () => {//player leaving site (assume leaving game)
     console.log(`${socket.id}` + " disconnected")
+    //update players list for all players in room 
+
+
+
     let room = socketId_to_name[socket.id].room;
     let name = socketId_to_name[socket.id].name;
-    delete socketId_to_name[socket.id];
-    let index = rooms[room].indexOf(name)
+
+    const nsp = io.of('/rooms/:' + `${room}`); //connect player to namespace (the url contact.com/rooms/:id)
+    nsp.emit('update', `in room ${room}`);
+    nsp.emit(rooms[room]); //emits list of players in the namespace
+
+    delete socketId_to_name[socket.id]; //update socket dictionary
+    //update room dictionary
+    let index = rooms[room].indexOf(name) 
     rooms[room].splice(index, 1)
   }
   );
@@ -75,7 +98,7 @@ var usersRouter = require('./routes/users');
 var testRouter = require('./routes/test');
 
 
-// send updates to all sockets in the rooms every second
+// CHECKING TOOL, send updates to all sockets in the rooms every second,
 setInterval(function () {
   for (const id in rooms) {
     io.to(`${id}`).emit('update', `in room ${id}`);
@@ -84,6 +107,14 @@ setInterval(function () {
     console.log(socketId_to_name);
   }
 }, 1000);
+
+/**
+ * Snig's work
+ * Send updates to every socket in room every time list of players change for that room
+ */
+
+
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
