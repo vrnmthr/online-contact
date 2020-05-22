@@ -6,12 +6,9 @@ var logger = require('morgan');
 var http = require('http');
 var socketIo = require("socket.io");
 
-// some hacky stuff for now that sets up socket namespacing and rooms
-rooms = {}
-  
-// users = 0;
-socketId_to_name = {}
 
+// key: id, value: room dict
+rooms = {};
 
 // create express app
 var app = express();
@@ -20,47 +17,42 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIo(server);
 
-io.on("connection", socket => {
+// creates a room with its own namespace and defines socket communication channels over that namespace
+// TOOD: eventually, we want to abstract this logic out of this file because this will become clunky
+function create_room(id) {
+  const nsp = io.of(`/rooms/${id}`);
 
-  let previousId;
-  const safeJoin = (currentId, name) => {
-    socket.leave(previousId);
-    socket.join(currentId); 
-    socketId_to_name[socket.id] = {"name": name, "socket": socket, "room": currentId};
-    if(currentId in rooms){
-        rooms[currentId].push(name)
-    }
-    else{
-        rooms[currentId] = [name]
-    }
+  nsp.on('connection', function (socket) {
+    console.log(`socket connected to room ${id}`);
 
-    if(previousId){
-        let index = rooms[previousId].indexOf(name)
-        rooms[previousId].splice(index, 1)
-    }
+    // add yourself to the client list and update all players
+    let room = rooms[id];
+    let client = { 'name': name };
+    room['clients'][id] = client;
+    nsp.emit('clients', room['clients']); //emits list of players in the namespace
 
-    previousId = currentId;
-  };
+    //When player edits name
+    socket.on("edit_name", (args) => {
+      //update rooms, replace name
+      let newName = args['name'];
+      let clientMap = rooms[id]['clients'];
+      clientMap[id]['name'] = newName;
+      nsp.emit('clients', clientMap); //emits list of players in the namespace
+      console.log(`${id}:${socket.id} changed name to ${newName}`);
+    });
 
-  console.log("new socket IO");
-  socket.on("join", (room, name) => {
-    safeJoin(room, name);
+    //Player leaves game (leaving site)
+    socket.on('disconnect', () => {
+      let clientMap = rooms[id]['clients'];
+      delete clientMap[socket.id];
+      nsp.emit('clients', clientMap); //emits list of players in the namespace
+      console.log(`${id}:${socket.id} disconnected`);
+    });
 
   });
 
-  socket.on('disconnect', () => {
-    console.log(`${socket.id}` + " disconnected")
-    let room = socketId_to_name[socket.id].room;
-    let name = socketId_to_name[socket.id].name;
-    delete socketId_to_name[socket.id];
-    let index = rooms[room].indexOf(name)
-    rooms[room].splice(index, 1)
-  }
-  );
-
-
-});
-
+  console.log(`created room with id ${id}`);
+};
 
 // makes io available as req.io in all request handlers
 // must be placed BEFORE all request handlers
@@ -69,22 +61,28 @@ app.use(function (req, res, next) {
   next();
 });
 
-// create routers
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-var testRouter = require('./routes/test');
+// SET UP ROUTES
+// this is a modularized router...
+const indexRouter = require("./routes/index");
+app.use('/', indexRouter);
+// this is not a modularized router...
+app.get('/test', function (req, res) {
+  res.send('pong');
+});
 
-
-// send updates to all sockets in the rooms every second
+// CHECKING TOOL, send updates to all sockets in each namespace every second
 setInterval(function () {
   for (const id in rooms) {
-    io.to(`${id}`).emit('update', `in room ${id}`);
+    const nsp = io.of(`/rooms/${id}`);
+    nsp.emit('update', `in room ${id}`);
     console.log("sent update");
-    console.log(rooms)
-    console.log(socketId_to_name);
   }
 }, 1000);
 
+
+
+
+/* AUTO GENERATED CODE, DO NOT MODIFY UNLESS YOU KNOW WHAT YOU'RE DOING */
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -94,13 +92,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/test', testRouter);
-// app.use('/rooms', roomRouter);
-
-
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
