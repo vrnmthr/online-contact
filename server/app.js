@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var http = require('http');
 var socketIo = require("socket.io");
+const { v4: uuidv4 } = require('uuid');
 
 
 // key: id, value: room dict
@@ -19,8 +20,25 @@ var io = socketIo(server);
 
 // creates a room with its own namespace and defines socket communication channels over that namespace
 // TOOD: eventually, we want to abstract this logic out of this file because this will become clunky
-function create_room(id) {
+function create_room(id, rounds, timeout) {
+
+  // create namespace
   const nsp = io.of(`/rooms/${id}`);
+
+  // create room object and add 
+  rooms[id] = {
+    'host': '',
+    'id': id,
+    'clients': {},
+    'state': 'pending',
+    'rounds': rounds,
+    'curRound': 0,
+    'cluemaster': [],
+    'curCluemaster': 0,
+    'timeout': timeout,
+    'clueQueue': [],
+    'currWord': ''
+  }
 
   nsp.on('connection', function (socket) {
     console.log(`socket connected to room ${id}`);
@@ -41,6 +59,10 @@ function create_room(id) {
       console.log(`${id}:${socket.id} changed name to ${newName}`);
     });
 
+    socket.on("set_host", () => {
+      rooms[id]['host'] = socket.id;
+    });
+
     //Player leaves game (leaving site)
     socket.on('disconnect', () => {
       let clientMap = rooms[id]['clients'];
@@ -54,34 +76,7 @@ function create_room(id) {
   console.log(`created room with id ${id}`);
 };
 
-// makes io available as req.io in all request handlers
-// must be placed BEFORE all request handlers
-app.use(function (req, res, next) {
-  req.io = io;
-  next();
-});
-
-// SET UP ROUTES
-// this is a modularized router...
-const indexRouter = require("./routes/index");
-app.use('/', indexRouter);
-// this is not a modularized router...
-app.get('/test', function (req, res) {
-  res.send('pong');
-});
-
-// CHECKING TOOL, send updates to all sockets in each namespace every second
-setInterval(function () {
-  for (const id in rooms) {
-    const nsp = io.of(`/rooms/${id}`);
-    nsp.emit('update', `in room ${id}`);
-    console.log("sent update");
-  }
-}, 1000);
-
-
-
-
+/* -------------------------------------------------------------------- */
 /* AUTO GENERATED CODE, DO NOT MODIFY UNLESS YOU KNOW WHAT YOU'RE DOING */
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -93,42 +88,67 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// catch 404 and forward to error handler
+// // catch 404 and forward to error handler
+// app.use(function (req, res, next) {
+//   next(createError(404));
+// });
+
+// // error handler
+// app.use(function (err, req, res, next) {
+//   // set locals, only providing error in development
+//   res.locals.message = err.message;
+//   res.locals.error = req.app.get('env') === 'development' ? err : {};
+
+//   // render the error page
+//   res.status(err.status || 500);
+//   res.render('error');
+// });
+
+/*
+ROUTE SETUP
+*/
+
+// makes io available as req.io in all request handlers
+// must be placed BEFORE all request handlers
 app.use(function (req, res, next) {
-  next(createError(404));
+  req.io = io;
+  next();
 });
 
-// error handler
-app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
-
-
-// Route for accessing a room id
-app.get('/:id', function (req, res, next) {
-    let id = req.params.id;
-    console.log("room req");
-    if (id in rooms) {
-        res.send(`room ${id} exists`);
-    } else {
-        res.send(`room ${id} does not exist. creating!`)
-        rooms[id] = {};
-    }
+// this is a modularized router...
+const indexRouter = require("./routes/index");
+app.use('/', indexRouter);
+// this is not a modularized router...
+app.get('/test', function (req, res) {
+  res.send('pong');
 });
 
 // Route for creating a new room
-app.get('/newroom', function (req, res) {
-  // random id for the new room is a random num between
-  let newRoomId = ( Math.random() * 1000000 ) | 0;
-  // add to rooms
-  rooms[newRoomId] = {}
+app.post('/newroom', function (req, res) {
+  let newRoomId = uuidv4();
+  console.log(req.body);
+  create_room(newRoomId, req.body.rounds, req.body.timeout);
   res.send(newRoomId);
 });
 
+// Route for accessing a room id
+app.get('/rooms/:id', function (req, res, next) {
+  let id = req.params.id;
+  if (id in rooms) {
+    res.send(`room ${id} exists`);
+  } else {
+    res.send(`room ${id} does not exist.`)
+  }
+});
+
+// CHECKING TOOL, send updates to all sockets in each namespace every second
+setInterval(function () {
+  for (const id in rooms) {
+    const nsp = io.of(`/rooms/${id}`);
+    nsp.emit('update', `in room ${id}`);
+    console.log("sent update");
+  }
+}, 1000);
+
+/* -------------------------------------------------------------------- */
 module.exports = { "app": app, "server": server };
