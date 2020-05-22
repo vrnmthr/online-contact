@@ -6,10 +6,10 @@ var logger = require('morgan');
 var http = require('http');
 var socketIo = require("socket.io");
 
-// some hacky stuff for now that sets up socket namespacing and rooms
+
 // key: id value: list of clients
 rooms = {}
-  
+
 // key: socket id, value: socket
 socketId_to_name = {}
 
@@ -21,85 +21,42 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIo(server);
 
-io.on("connection", socket => {//player joining
+// creates a room with its own namespace and defines socket communication channels over that namespace
+// TOOD: eventually, we want to abstract this logic out of this file because this will become clunky
+function create_room(id) {
+  const nsp = io.of(`/rooms/${id}`);
 
-  let previousId;
-  const safeJoin = (currentId, name) => {
-    socket.leave(previousId);
-    socket.join(currentId); 
-    socketId_to_name[socket.id] = {"name": name, "socket": socket, "room": currentId};
+  nsp.on('connection', function (socket) {
+    console.log(`socket connected to room ${id}`);
 
+    // add yourself to the client list and update all players
+    let room = rooms[id];
+    let client = { 'name': name };
+    room['clients'][id] = client;
+    nsp.emit('clients', room['clients']); //emits list of players in the namespace
 
+    //When player edits name
+    socket.on("edit_name", (args) => {
+      //update rooms, replace name
+      let newName = args['name'];
+      let clientMap = rooms[id]['clients'];
+      clientMap[id]['name'] = newName;
+      nsp.emit('clients', clientMap); //emits list of players in the namespace
+      console.log(`${id}:${socket.id} changed name to ${newName}`);
+    });
 
-    if(currentId in rooms){ //player joining room
-        rooms[currentId].push(name)
-
-        
-    }
-    else{ //player joining empty room (for now create a new room)
-        rooms[currentId] = [name]
-        //TODO: check if room exists else send out error message
-
-    }
-
-    if(previousId){ //if previous id exists
-        let index = rooms[previousId].indexOf(name)
-        rooms[previousId].splice(index, 1) //remove from that room
-    }
-
-    // Sending new list of players to all players, assumes namespace set up
-    const nsp = io.of('/rooms/:' + `${currentId}`); //connect player to namespace (the url contact.com/rooms/:id)
-    nsp.emit('update', `in room ${currentId}`);
-    nsp.emit('players-update',rooms[currentId]); //emits list of players in the namespace
-  
-  
-  };
-
-  console.log("new socket IO");
-  socket.on("join", (room, name) => {
-    safeJoin(room, name);
+    //Player leaves game (leaving site)
+    socket.on('disconnect', () => {
+      let clientMap = rooms[id]['clients'];
+      delete clientMap[socket.id];
+      nsp.emit('clients', clientMap); //emits list of players in the namespace
+      console.log(`${id}:${socket.id} disconnected`);
+    });
 
   });
 
-
-  //When player edits name
-  socket.on("edit_name",(room,name) => {
-    //update rooms, replace name
-    let index = rooms[room].indexOf(name) 
-    rooms[room].splice(index, 1,"name")
-
-    const nsp = io.of('/rooms/:' + `${room}`); //connect player to namespace (the url contact.com/rooms/:id)
-    nsp.emit('update', `in room ${room}`);
-    nsp.emit('players-update',rooms[room]); //emits list of players in the namespace
-
-  });
-
-  //Player leaves game (leaving site)
-  socket.on('disconnect', () => {
-    console.log(`${socket.id}` + " disconnected")
-    //update players list for all players in room 
-
-
-
-    let room = socketId_to_name[socket.id].room;
-    let name = socketId_to_name[socket.id].name;
-
-    const nsp = io.of('/rooms/:' + `${room}`); //connect player to namespace (the url contact.com/rooms/:id)
-    nsp.emit('update', `in room ${room}`);
-    nsp.emit('players-update',rooms[room]); //emits list of players in the namespace
-
-    delete socketId_to_name[socket.id]; //update socket dictionary
-    //update room dictionary
-    let index = rooms[room].indexOf(name) 
-    rooms[room].splice(index, 1)
-  }
-  );
-
-
-
-
-});
-
+  console.log(`created room with id ${id}`);
+};
 
 // makes io available as req.io in all request handlers
 // must be placed BEFORE all request handlers
@@ -138,7 +95,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+// app.use('/users', usersRouter);
 app.use('/test', testRouter);
 // app.use('/rooms', roomRouter);
 
