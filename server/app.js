@@ -109,4 +109,26 @@ app.use(function (err, req, res, next) {
   res.render('error');
 });
 
+
+// Route for accessing a room id
+app.get('/:id', function (req, res, next) {
+    let id = req.params.id;
+    console.log("room req");
+    if (id in rooms) {
+        res.send(`room ${id} exists`);
+    } else {
+        res.send(`room ${id} does not exist. creating!`)
+        rooms[id] = {};
+    }
+});
+
+// Route for creating a new room
+app.get('/newroom', function (req, res) {
+  // random id for the new room is a random num between
+  let newRoomId = ( Math.random() * 1000000 ) | 0;
+  // add to rooms
+  rooms[newRoomId] = {}
+  res.send(newRoomId);
+});
+
 module.exports = { "app": app, "server": server };
