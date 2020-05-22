@@ -7,12 +7,8 @@ var http = require('http');
 var socketIo = require("socket.io");
 
 
-// key: id value: list of clients
-rooms = {}
-
-// key: socket id, value: socket
-socketId_to_name = {}
-
+// key: id, value: room dict
+rooms = {};
 
 // create express app
 var app = express();
@@ -65,25 +61,28 @@ app.use(function (req, res, next) {
   next();
 });
 
-// create routers
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-var testRouter = require('./routes/test');
+// SET UP ROUTES
+// this is a modularized router...
+const indexRouter = require("./routes/index");
+app.use('/', indexRouter);
+// this is not a modularized router...
+app.get('/test', function (req, res) {
+  res.send('pong');
+});
 
-
-// CHECKING TOOL, send updates to all sockets in the rooms every second,
+// CHECKING TOOL, send updates to all sockets in each namespace every second
 setInterval(function () {
   for (const id in rooms) {
-    io.to(`${id}`).emit('update', `in room ${id}`);
+    const nsp = io.of(`/rooms/${id}`);
+    nsp.emit('update', `in room ${id}`);
     console.log("sent update");
-    console.log(rooms)
-    console.log(socketId_to_name);
   }
 }, 1000);
 
 
 
 
+/* AUTO GENERATED CODE, DO NOT MODIFY UNLESS YOU KNOW WHAT YOU'RE DOING */
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -93,13 +92,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/', indexRouter);
-// app.use('/users', usersRouter);
-app.use('/test', testRouter);
-// app.use('/rooms', roomRouter);
-
-
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
