@@ -1,4 +1,65 @@
-import React, { Component } from 'react';
+import React, {Component} from 'react';
+import { BrowserRouter as Router, Route } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
+
+import Landing from "./components/Landing"
+import Create from "./components/Create";
+import Lobby from "./components/Lobby";
+import { Redirect } from 'react-router';
+
+
+class App extends Component {
+
+  constructor(props){
+      super(props)
+      this.state = {
+        redirect: false,
+        url: null, 
+        room: null
+      }
+  }
+
+  createRoomRoute = (id) => {
+    
+    this.setState({room: id})
+    var pathname = "/rooms/" + id.toString();
+    this.setState({url: pathname});
+    this.setState({redirect: true});
+    return true
+  }
+
+  handleRedirect = () => {
+    if (this.state.redirect) {
+        return <Redirect push to={this.state.url} />;
+    }
+  }
+
+  render() {
+
+    return(
+    
+    <Router>
+        {this.handleRedirect()}
+      <div className="container">
+        <Route exact path = '/' render = {(props) => <Landing createRoomRoute = {this.createRoomRoute} {...props}/>}></Route>
+        {/* <Route path="/create_game" component={Create} />
+        <Route path="/lobby" component={Lobby} /> */}
+        {this.state.url ? 
+            
+            <Route exact path = {this.state.url} render = {(props) => <Lobby url = {this.state.url} id = {this.state.room} {...props}/>}></Route>
+
+            : null
+        }
+      </div>
+    </Router>
+    )
+}
+}
+
+export default App;
+
+
+/*import React, { Component } from 'react';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import logo from './logo.svg';
@@ -22,7 +83,7 @@ class App extends Component {
     })
   }
 
-  joinRoom = (event) => {
+ joinRoom = (event) => {
     event.preventDefault();
     let id = this.state['room'].value;
     let name = this.state['name'].value;
@@ -67,4 +128,4 @@ class App extends Component {
 
 }
 
-export default App;
+export default App; */

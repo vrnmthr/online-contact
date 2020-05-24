@@ -1,0 +1,74 @@
+.Header_Section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20%;
+    padding-bottom: 3%;
+}
+
+.Instructions_Section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: solid;
+}
+
+h2 {
+    padding: 1%;
+}
+
+p {
+    padding: 1.75%;
+}
+
+.Join_Create {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+    grid-template-rows: repeat(1, minmax(75px, 1fr));
+    padding: 2%;
+    grid-gap: 30px
+}
+
+a:any-link {
+    text-decoration: none;
+    text-align: center;
+    color: black;
+}
+
+h5 {
+    padding: 10%;
+}
+
+.form {
+    grid-column: 2;
+    display: flex;
+    justify-content: center;
+}
+
+.one {
+    grid-row: 1;
+    grid-column: 1;
+}
+
+.two {
+    grid-row: 1;
+    grid-column: 2;
+}
+
+.link {
+    grid-column: 1;
+    display: flex;
+    justify-content: center;
+}
+
+Button {
+    padding: 10%;
+}
+
+.wrong_code{
+    color: red;
+    grid-column: 2;
+    display: flex;
+    justify-content: center;
+
+}

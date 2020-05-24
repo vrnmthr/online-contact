@@ -6,6 +6,8 @@ var logger = require('morgan');
 var http = require('http');
 var socketIo = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
+var cors = require('cors')
+
 
 
 // key: id, value: room dict
@@ -45,7 +47,7 @@ function create_room(id, rounds, timeout) {
 
     // add yourself to the client list and update all players
     let room = rooms[id];
-    let client = { 'name': name };
+    let client = { 'name': socket.id }; //changed name variable to socket.id
     room['clients'][id] = client;
     nsp.emit('clients', room['clients']); //emits list of players in the namespace
 
@@ -61,6 +63,7 @@ function create_room(id, rounds, timeout) {
 
     socket.on("set_host", () => {
       rooms[id]['host'] = socket.id;
+      console.log("set host")
     });
 
     //Player leaves game (leaving site)
@@ -82,6 +85,7 @@ function create_room(id, rounds, timeout) {
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
+app.use(cors()) // Use this after the variable declaration
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
