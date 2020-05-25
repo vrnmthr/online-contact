@@ -46,9 +46,9 @@ function create_room(id, rounds, timeout) {
     console.log(`socket connected to room ${id}`);
 
     // add yourself to the client list and update all players
-    let room = rooms[id];
-    let client = { 'name': socket.id }; //changed name variable to socket.id
-    room['clients'][id] = client;
+    let clientMap = rooms[id]['clients'];
+    let client = { 'name': '' };
+    clientMap[socket.id] = client;
     nsp.emit('clients', room['clients']); //emits list of players in the namespace
 
     //When player edits name
@@ -56,7 +56,7 @@ function create_room(id, rounds, timeout) {
       //update rooms, replace name
       let newName = args['name'];
       let clientMap = rooms[id]['clients'];
-      clientMap[id]['name'] = newName;
+      clientMap[socket.id]['name'] = newName;
       nsp.emit('clients', clientMap); //emits list of players in the namespace
       console.log(`${id}:${socket.id} changed name to ${newName}`);
     });
