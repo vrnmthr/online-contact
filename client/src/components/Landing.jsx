@@ -12,7 +12,7 @@ export default class Landing extends Component {
         this.onSubmit = this.onSubmit.bind(this);
         this.state = {
             code: '',
-            show: false, 
+            show: false,
             wrongCode: false
         };
     }
@@ -25,36 +25,33 @@ export default class Landing extends Component {
 
     onSubmit(e) {
         e.preventDefault();
-        
+
         var code = this.state.code,
-        
-        // check code
-        url = '/rooms/' + code
+
+            // check code
+            url = '/rooms/' + code
         axios.get(SERVER_PORT + url)
-        .then(res => {
-            console.log(res.data)
-        if(res.data == `room ${this.state.code} exists`){
-            this.setState({wrongCode: false})
-            this.props.createRoomRoute(code)
-        }
-        else{
-            console.log("wrong code")
-            this.setState({wrongCode: true})
-        }
-      })
-        
+            .then(res => {
+                console.log(res.data)
+                if (res.data == `room ${this.state.code} exists`) {
+                    this.setState({ wrongCode: false })
+                    this.props.createRoomRoute(code)
+                }
+                else {
+                    console.log("wrong code")
+                    this.setState({ wrongCode: true })
+                }
+            })
+
     }
 
-    onClick = () => {
-         var rounds = 1
-         var timeout = 1000
-         axios.post(SERVER_PORT+`/newroom`, {rounds, timeout})
-            .then(res => {
-                
-                console.log(res.data);
-
-                this.props.createRoomRoute(res.data)
-            })
+    // create a new game and then redirect to the link
+    createGame = () => {
+        console.log("creating new game");
+        axios.get(`${SERVER_PORT}/rooms/new`).then(res => {
+            let roomId = res.data;
+            this.props.history.push(`/rooms/${roomId}`);
+        })
     }
 
     render() {
@@ -77,7 +74,7 @@ export default class Landing extends Component {
                 </div>
 
                 <div className="Join_Create">
-                <Button className="one"  onClick={this.onClick}>Create Game</Button>
+                    <Button className="one" onClick={this.createGame}>Create Game</Button>
 
                     <Button className="two" onClick={() => { this.setState({ show: !this.state.show }) }}>Enter Game</Button>
                     {
@@ -98,15 +95,15 @@ export default class Landing extends Component {
                             </form>
                         </div> : null
 
-                        
+
                     }
 
-                    {this.state.wrongCode ? 
-                        <div className = "wrong_code">Wrong Code</div>
+                    {this.state.wrongCode ?
+                        <div className="wrong_code">Wrong Code</div>
                         : null}
 
                 </div>
-               
+
             </div>
         )
     }
