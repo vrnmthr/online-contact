@@ -29,7 +29,7 @@ function create_room(id) {
   // create namespace
   const nsp = io.of(`/rooms/${id}`);
 
-  // create room object and add 
+  // create room object and add
   rooms[id] = {
     'host': '',
     'id': id,
@@ -78,6 +78,32 @@ function create_room(id) {
       nsp.emit('clients', clientMap); //emits list of players in the namespace
       console.log(`${id}:${socket.id} disconnected`);
     });
+
+    //cluemaster submits word
+    socket.on('word', (args) => {
+      // update currWord
+      let newWord = args['word'];
+      rooms[id]['currWord'] = newWord;
+    });
+
+    //someone submits a clue
+    socket.on('clue', (args) => {
+      let newClue = args['clue'];
+      let newAns = args['ans'];
+      let fromID = socket.id;
+
+      let newClueDict = {'clue': newClue,
+                         'ans': newAns,
+                         'from': fromID };
+                         
+      clueQueue.push(newClueDict);
+    });
+
+    //someone guessed the clue correctly
+    socket.on('correct', () => {
+
+    });
+
 
   });
 
