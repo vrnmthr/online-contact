@@ -31,6 +31,7 @@ function create_room(id) {
 
   // create room object and add 
   rooms[id] = {
+    'mode': 'classic',
     'host': '',
     'id': id,
     'clients': {},
@@ -66,6 +67,25 @@ function create_room(id) {
       console.log(`${id}:${socket.id} changed name to ${newName}`);
     });
 
+    // edit round for a room
+    socket.on("set_rounds", (rounds) => {
+      rooms[id]['rounds'] = rounds;
+      console.log(`${id}: set rounds to ${rounds}`);
+    });
+
+    // edit timeout for a room
+    socket.on("set_timeout", (timeout) => {
+      rooms[id]["timeout"] = timeout;
+      console.log(`${id}: set timeout to ${timeout}`);
+    })
+
+    // set the game mode
+    socket.on("set_mode", (mode) => {
+      rooms[id]["mode"] = mode;
+      console.log(`${id}: set mode to ${mode}`);
+    })
+
+    // set host for a room
     socket.on("set_host", () => {
       rooms[id]['host'] = socket.id;
       console.log("set host")
