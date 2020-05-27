@@ -91,6 +91,31 @@ function create_room(id) {
       console.log("set host")
     });
 
+        //cluemaster submits word
+        socket.on('word', (args) => {
+          // update currWord
+          let newWord = args['word'];
+          rooms[id]['currWord'] = newWord;
+        });
+    
+        //someone submits a clue
+        socket.on('clue', (args) => {
+          let newClue = args['clue'];
+          let newAns = args['ans'];
+          let fromID = socket.id;
+    
+          let newClueDict = {'clue': newClue,
+                             'ans': newAns,
+                             'from': fromID };
+                             
+          clueQueue.push(newClueDict);
+        });
+    
+        //someone guessed the clue correctly
+        socket.on('correct', () => {
+    
+        });
+
     //Player leaves game (leaving site)
     socket.on('disconnect', () => {
       let clientMap = rooms[id]['clients'];
@@ -99,30 +124,7 @@ function create_room(id) {
       console.log(`${id}:${socket.id} disconnected`);
     });
 
-    //cluemaster submits word
-    socket.on('word', (args) => {
-      // update currWord
-      let newWord = args['word'];
-      rooms[id]['currWord'] = newWord;
-    });
 
-    //someone submits a clue
-    socket.on('clue', (args) => {
-      let newClue = args['clue'];
-      let newAns = args['ans'];
-      let fromID = socket.id;
-
-      let newClueDict = {'clue': newClue,
-                         'ans': newAns,
-                         'from': fromID };
-                         
-      clueQueue.push(newClueDict);
-    });
-
-    //someone guessed the clue correctly
-    socket.on('correct', () => {
-
-    });
 
 
   });
