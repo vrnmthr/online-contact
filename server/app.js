@@ -67,8 +67,11 @@ function create_room(id) {
     });
 
     socket.on("set_host", () => {
-      rooms[id]['host'] = socket.id;
-      console.log("set host")
+      let clientMap = Object.keys(rooms[id]['clients']);
+      if (clientMap.length === 1) { //only set host for the first client
+        rooms[id]['host'] = socket.id;
+        console.log("set host")
+      }
     });
 
     //Player leaves game (leaving site)

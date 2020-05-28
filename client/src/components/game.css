@@ -1,0 +1,26 @@
+.header{
+    margin: 2rem;
+}
+
+.wrapper-main{
+    padding: 2rem;
+}
+
+.player-section{
+    padding: 2rem;
+    text-align: center;
+}
+
+.players-header{
+    margin-bottom: 1rem;
+}
+
+.info-section{
+    padding: 2rem;
+}
+
+.btns{
+    background-color: #603CBA;
+    border: none;
+    border-radius: 15px;
+}
