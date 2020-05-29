@@ -168,7 +168,7 @@ ROUTE SETUP
 // makes io available as req.io in all request handlers
 // must be placed BEFORE all request handlers
 app.use(function (req, res, next) {
-  req.io = io;
+  req.io = io; 
   next();
 });
 
