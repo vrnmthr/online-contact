@@ -99,11 +99,26 @@ function create_room(id) {
       console.log(`${id}:${socket.id} disconnected`);
     });
 
+    //start game after required setup
+    socket.on('start_req', () => {
+      // randomize cluemaster order
+      let newCluemasterOrder = [];
+      for (const clientID in clientMap) {
+        newCluemasterOrder.push(clientID);
+      }
+      newCluemasterOrder.sort(() => Math.random() - 0.5);
+      rooms[id]['cluemaster'] = newCluemasterOrder;
+
+      rooms[id]['state'] = 'active';
+      nsp.emit('start_game', {});
+    });
+
     //cluemaster submits word
     socket.on('word', (args) => {
       // update currWord
       let newWord = args['word'];
       rooms[id]['currWord'] = newWord;
+      console.log(`${id}: set currWord to ${newWord}`);
     });
 
     //someone submits a clue
@@ -115,13 +130,33 @@ function create_room(id) {
       let newClueDict = {'clue': newClue,
                          'ans': newAns,
                          'from': fromID };
-                         
-      clueQueue.push(newClueDict);
+
+      rooms[id]['clueQueue'].push(newClueDict);
+      console.log(`${id}: added ${newClueDict} to clueQueue`);
+
+      // start timer
+      var counter = 60;
+      var timer = setInterval(function () {
+          console.log("time remaining: " + counter);
+          if (counter <= 0) {
+            // time over for this clue. clear this and send next one
+            rooms[id]['clueQueue'].shift();
+            let nextClue = rooms[id]['clueQueue'][0];
+            nsp.emit('clue', nextClue);
+
+            clearInterval(timer);
+          }
+          counter--;
+      }, 100);
+      
     });
 
     //someone guessed the clue correctly
     socket.on('correct', () => {
 
+      // clear timeout
+
+      // emit new clue
     });
 
 
