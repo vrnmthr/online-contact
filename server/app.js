@@ -42,7 +42,8 @@ function create_room(id) {
     'curCluemaster': 0,
     'timeout': 60,
     'clueQueue': [],
-    'currWord': ''
+    'currWord': '',
+    'counter': 60
   }
 
   nsp.on('connection', function (socket) {
@@ -76,6 +77,7 @@ function create_room(id) {
     // edit timeout for a room
     socket.on("set_timeout", (timeout) => {
       rooms[id]["timeout"] = timeout;
+      rooms[id]["counter"] = timeout;
       console.log(`${id}: set timeout to ${timeout}`);
     })
 
@@ -95,7 +97,23 @@ function create_room(id) {
         socket.on('word', (args) => {
           // update currWord
           let newWord = args['word'];
-          rooms[id]['currWord'] = newWord;
+          rooms[id]['currWord'] = {word: newWord, progress: 0};
+          nsp.emit('start_phase', rooms[id]['currWord']);
+
+          // start timer (Snig needs to fix)
+      
+      var timer = setInterval(function () {
+          console.log("time remaining: " + rooms[id]['counter']);
+          if (counter <= 0) {
+            // time over for this clue. clear this and send next one
+            rooms[id]['clueQueue'].shift();
+            let nextClue = rooms[id]['clueQueue'][0];
+            nsp.emit('clue', nextClue);
+
+            clearInterval(timer);
+          }
+          rooms[id]['counter']--;
+      }, 1000)
         });
     
         //someone submits a clue
@@ -112,7 +130,38 @@ function create_room(id) {
         });
     
         //someone guessed the clue correctly
-        socket.on('correct', () => {
+        socket.on('correct?', (args) => {
+          if(args['guess'].equals(rooms[id]['currWord'])) {//correct guess
+            //TODO: Multithreaded stuff
+            //lock the server
+            //tell whoever is correct but late
+
+            nsp.emit("correct", {id: socket.id, name: rooms[id][clients][socket.id]['name']}) //tell everyone about correct answer
+            rooms[id]['clueQueue'] = []; //clear queue
+
+            //stop timer (Snig needs to fix)
+
+
+            rooms[id]['currWord']['progress']++; //progress on word
+
+            
+                    
+            if(rooms[id]['currWord']['progress'] >= rooms[id]['currWord']['word'].length) { //check if word is done 
+              //TODO later 
+              //select new clue master
+              //increment rounds
+              //set up new word etc
+
+            } else {
+                //announce new letter for clues
+            }
+            
+      
+          } else {//incorrect guess
+            nsp.to(socket.id).emit("not_correct",{});
+
+          }
+
     
         });
 
