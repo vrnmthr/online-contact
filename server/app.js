@@ -93,6 +93,20 @@ function create_room(id) {
       console.log("set host")
     });
 
+        //start game after required setup
+        socket.on('start_req', () => {
+          // randomize cluemaster order
+          let newCluemasterOrder = [];
+          for (const clientID in clientMap) {
+            newCluemasterOrder.push(clientID);
+          }
+          newCluemasterOrder.sort(() => Math.random() - 0.5);
+          rooms[id]['cluemaster'] = newCluemasterOrder;
+    
+          rooms[id]['state'] = 'active';
+          nsp.emit('start_game', {});
+        });
+
         //cluemaster submits word
         socket.on('word', (args) => {
           // update currWord
@@ -145,8 +159,8 @@ function create_room(id) {
             rooms[id]['currWord']['progress']++; //progress on word
 
             
-                    
-            if(rooms[id]['currWord']['progress'] >= rooms[id]['currWord']['word'].length) { //check if word is done 
+              
+            if(rooms[id]['currWord']['progress'] >= rooms[id]['currWord']['word'].length) { //check if word is done by people getting all the letters
               //TODO later 
               //select new clue master
               //increment rounds
