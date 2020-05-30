@@ -11,7 +11,7 @@ var cors = require('cors')
 // key: id, value: room dict
 rooms = {};
 
-// create express app
+// create express app 
 var app = express();
 
 // create HTTP server with socketIO
