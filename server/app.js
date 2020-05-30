@@ -105,7 +105,7 @@ function create_room(id) {
     
           rooms[id]['state'] = 'active';
           nsp.emit('start_game', {});
-        });
+        });     
 
         //cluemaster submits word
         socket.on('word', (args) => {
