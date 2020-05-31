@@ -41,9 +41,12 @@ function create_room(id) {
     'cluemaster': [],
     'curCluemaster': 0,
     'timeout': 60,
+    'timer':0,
     'clueQueue': [],
-    'currWord': '',
-    'counter': 60
+    'currWord': {word: '',progress: 0},
+    'counter': 60,
+    'currClue': {clue:'' , ans:'',fromID: 0}
+    
   }
 
   nsp.on('connection', function (socket) {
@@ -116,7 +119,7 @@ function create_room(id) {
 
           // start timer (Snig needs to fix)
       
-      var timer = setInterval(function () {
+      rooms[id]['timer'] = setInterval(function () {
           console.log("time remaining: " + rooms[id]['counter']);
           if (counter <= 0) {
             // time over for this clue. clear this and send next one
@@ -124,10 +127,10 @@ function create_room(id) {
             let nextClue = rooms[id]['clueQueue'][0];
             nsp.emit('clue', nextClue);
 
-            clearInterval(timer);
+            clearInterval(rooms[id]['timer']);
           }
           rooms[id]['counter']--;
-      }, 1000)
+      }, 1000);
         });
     
         //someone submits a clue
@@ -145,7 +148,7 @@ function create_room(id) {
     
         //someone guessed the clue correctly
         socket.on('correct?', (args) => {
-          if(args['guess'].equals(rooms[id]['currWord'])) {//correct guess
+          if(args['guess'].equals(rooms[id]['currClue']['ans'])) {//correct guess
             //TODO: Multithreaded stuff
             //lock the server
             //tell whoever is correct but late
@@ -153,8 +156,9 @@ function create_room(id) {
             nsp.emit("correct", {id: socket.id, name: rooms[id][clients][socket.id]['name']}) //tell everyone about correct answer
             rooms[id]['clueQueue'] = []; //clear queue
 
-            //stop timer (Snig needs to fix)
-
+            //stop timer 
+            clearInterval(rooms[id]['timer']);
+ 
 
             rooms[id]['currWord']['progress']++; //progress on word
 
