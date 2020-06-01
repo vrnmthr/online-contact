@@ -158,7 +158,7 @@ function create_room(id) {
 
             //stop timer 
             clearInterval(rooms[id]['timer']);
- 
+  
 
             rooms[id]['currWord']['progress']++; //progress on word
 
