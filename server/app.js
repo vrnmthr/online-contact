@@ -6,7 +6,7 @@ var logger = require('morgan');
 var http = require('http');
 var socketIo = require("socket.io");
 const { v4: uuidv4 } = require('uuid');
-var cors = require('cors')
+var cors = require('cors');
 
 // key: id, value: room dict
 rooms = {};
@@ -18,10 +18,6 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIo(server);
 
-//timer function
-function start_timer(rooms,id,nsp){
-  
-}
 
 io.on('connection', function (socket) {
   console.log("socket connection");
