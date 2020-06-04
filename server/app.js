@@ -11,7 +11,7 @@ var cors = require('cors')
 // key: id, value: room dict
 rooms = {};
 
-// create express app 
+// create express app
 var app = express();
 
 // create HTTP server with socketIO
@@ -20,7 +20,7 @@ var io = socketIo(server);
 
 //timer function
 function start_timer(rooms,id,nsp){
-  
+
 }
 
 io.on('connection', function (socket) {
@@ -51,7 +51,7 @@ function create_room(id) {
     'currWord': {word: '',progress: 0},
     'counter': 60,
     'currClue': {clue:'' , ans:'',fromID: 0}
-    
+
   }
 
   nsp.on('connection', function (socket) {
@@ -118,7 +118,7 @@ function create_room(id) {
       let currCluemasterID = rooms[id]['cluemaster'][rooms[id]['curCluemaster']];
       nsp.emit('start_turn', {id: currCluemasterID, name: currCluemasterID['name']});
 
-    });     
+    });
 
         //cluemaster submits word
     socket.on('word', (args) => {
@@ -142,13 +142,13 @@ function create_room(id) {
         rooms[id]['timer'] = setInterval(function () {
           nsp.emit('time', {remaining:rooms[id]['counter'] });
           console.log("time remaining: " + rooms[id]['counter']);
-      
+
           if (rooms[id]['counter'] <= 0) {
             // time over for this clue. clear this and send next one
             rooms[id]['clueQueue'].shift();
             let nextClue = rooms[id]['clueQueue'][0];
             nsp.emit('clue', nextClue);
-      
+
             clearInterval(rooms[id]['timer']);
           }
           rooms[id]['counter']--;
@@ -161,7 +161,7 @@ function create_room(id) {
       },1000);
 
   });
-    
+
     //someone submits a clue
     socket.on('clue', (args) => {
       let newClue = args['clue'];
@@ -170,72 +170,76 @@ function create_room(id) {
 
       let newClueDict = {'clue': newClue,
                           'ans': newAns,
-                          'from': fromID };
-                          
+                          'from': fromID,
+                          'solved': false};
+
       clueQueue.push(newClueDict);
     });
-  
+
     //someone guessed the clue correctly
     socket.on('correct', (args) => {
       //TODO: Multithreaded stuff
       //lock the server
       //tell whoever is correct but late
 
-      nsp.emit("correct", {id: socket.id, name: rooms[id][clients][socket.id]['name']}) //tell everyone about correct answer
-      rooms[id]['clueQueue'] = []; //clear queue
-      clearInterval(rooms[id]['timer']);//stop timer 
-      rooms[id]['currWord']['progress']++; //progress on word
-      
+      if(rooms[id]['clueQueue'][0]['solved']){
+        nsp.emit("already_answered", {});
+      } else{
+        nsp.emit("correct", {id: socket.id, name: rooms[id][clients][socket.id]['name']}) //tell everyone about correct answer
+        rooms[id]['clueQueue'] = []; //clear queue
+        clearInterval(rooms[id]['timer']);//stop timer
+        rooms[id]['currWord']['progress']++; //progress on word
 
-      if(rooms[id]['currWord']['progress'] >= rooms[id]['currWord']['word'].length) { //check if word is done by people getting all the letters
-        //TODO later 
-        //select new clue master
-        //increment rounds
-        //set up new word etc
 
-      } else {
+        if(rooms[id]['currWord']['progress'] >= rooms[id]['currWord']['word'].length) { //check if word is done by people getting all the letters
+          //TODO later
+          //select new clue master
+          //increment rounds
+          //set up new word etc
 
-        //inform clients of progress
-        nsp.emit('progress',{word: rooms[id]['currWord']['word'],progress: rooms[id]['currWord']['progress']});
+        } else {
 
-        //reset timer
-        rooms[id]['counter'] = rooms[id]['timeout'];
+          //inform clients of progress
+          nsp.emit('progress',{word: rooms[id]['currWord']['word'],progress: rooms[id]['currWord']['progress']});
 
-        //wait for clues to be submitted then emit next clue
-        let clueTimer = setInterval(function () {
-          console.log("waiting for clue");
+          //reset timer
+          rooms[id]['counter'] = rooms[id]['timeout'];
 
-          if(rooms[id]['clueQueue'].length >= 1) {//at least one clue in queue
-            let currClue = rooms[id]['clueQueue'].shift();
-            nsp.emit('clue', currClue);
-            console.log("new clue in play");
+          //wait for clues to be submitted then emit next clue
+          let clueTimer = setInterval(function () {
+            console.log("waiting for clue");
 
-            //start timer for clue to be solved
-            rooms[id]['timer'] = setInterval(function () {
-              nsp.emit('time', {remaining:rooms[id]['counter'] });
-              console.log("time remaining: " + rooms[id]['counter']);
-          
-              if (rooms[id]['counter'] <= 0) {
-                // time over for this clue. clear this and send next one
-                rooms[id]['clueQueue'].shift();
-                let nextClue = rooms[id]['clueQueue'][0];
-                nsp.emit('clue', nextClue);
-          
-                clearInterval(rooms[id]['timer']);
-              }
+            if(rooms[id]['clueQueue'].length >= 1) {//at least one clue in queue
+              let currClue = rooms[id]['clueQueue'].shift();
+              nsp.emit('clue', currClue);
+              console.log("new clue in play");
 
-              rooms[id]['counter']--;
+              //start timer for clue to be solved
+              rooms[id]['timer'] = setInterval(function () {
+                nsp.emit('time', {remaining:rooms[id]['counter'] });
+                console.log("time remaining: " + rooms[id]['counter']);
 
-            }, 1000);
+                if (rooms[id]['counter'] <= 0) {
+                  // time over for this clue. clear this and send next one
+                  rooms[id]['clueQueue'].shift();
+                  let nextClue = rooms[id]['clueQueue'][0];
+                  nsp.emit('clue', nextClue);
 
-            //stop waiting for clues and carry on with the game
-            clearInterval(clueTimer);
+                  clearInterval(rooms[id]['timer']);
+                }
+
+                rooms[id]['counter']--;
+
+              }, 1000);
+
+              //stop waiting for clues and carry on with the game
+              clearInterval(clueTimer);
+            }
+
+            },1000);
+
           }
-
-          },1000);
-
       }
-
 
     });
 
@@ -245,9 +249,9 @@ function create_room(id) {
 
 };
 
-  
 
-    
+
+
 
 
 
@@ -287,7 +291,7 @@ ROUTE SETUP
 // makes io available as req.io in all request handlers
 // must be placed BEFORE all request handlers
 app.use(function (req, res, next) {
-  req.io = io; 
+  req.io = io;
   next();
 });
 
