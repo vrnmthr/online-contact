@@ -185,6 +185,7 @@ function create_room(id) {
       if(rooms[id]['clueQueue'][0]['solved']){
         nsp.emit("already_answered", {});
       } else{
+        rooms[id]['clueQueue'][0]['solved'] = true;
         nsp.emit("correct", {id: socket.id, name: rooms[id][clients][socket.id]['name']}) //tell everyone about correct answer
         rooms[id]['clueQueue'] = []; //clear queue
         clearInterval(rooms[id]['timer']);//stop timer
