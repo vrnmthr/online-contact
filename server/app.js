@@ -194,6 +194,9 @@ function create_room(id) {
       let newClue = args['clue'];
       let newAns = args['ans'];
       let fromID = socket.id;
+      let currWordDict = rooms[id]['currWord'];
+
+      if (newClue[0].equals(currWordDict['word'][currWordDict['progress']])) { //clue first letter matches progrress in word
 
       let newClueDict = {
         id: uuidv4(),
@@ -206,6 +209,9 @@ function create_room(id) {
       };
 
       clueQueue.push(newClueDict);
+    } else { //clue first letter does not match progrress in word
+      socket.emit('invalid_clue',{});
+    }
     });
 
 
