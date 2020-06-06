@@ -11,6 +11,8 @@ var cors = require('cors');
 // key: id, value: room dict
 rooms = {};
 
+var animals = "alligator, anteater, armadillo, auroch, axolotl, badger, bat, bear, beaver, blobfish, buffalo, camel, chameleon, cheetah, chipmunk, chinchilla, chupacabra, cormorant, coyote, crow, dingo, dinosaur, dog, dolphin, dragon, duck, dumbo octopus, elephant, ferret, fox, frog, giraffe, goose, gopher, grizzly, hamster, hedgehog, hippo, hyena, jackal, jackalope, ibex, ifrit, iguana, kangaroo, kiwi, koala, kraken, lemur, leopard, liger, lion, llama, manatee, mink, monkey, moose, narwhal, nyan cat, orangutan, otter, panda, penguin, platypus, python, pumpkin, quagga, quokka, rabbit, raccoon, rhino, sheep, shrew, skunk, slow loris, squirrel, tiger, turtle, unicorn, walrus, wolf, wolverine, wombat"
+animals = animals.split(',');
 // create express app
 var app = express();
 
@@ -48,6 +50,7 @@ function create_room(id) {
     'counter': 60,
     'currClue': null,
     'clueDaemon': null,
+    'animals': JSON.parse(JSON.stringify(animals)), //makes a deepcopy
   }
 
   nsp.on('connection', function (socket) {
@@ -58,7 +61,10 @@ function create_room(id) {
 
     // add yourself to the client list and update all players
     let clientMap = rooms[id]['clients'];
-    let client = { 'name': '' };
+    let animalList = rooms[id]['animals'];
+    let randomIndex = Math.floor(Math.random() * animalList.length);
+    let tempAnimal = animalList.splice(randomIndex,1);
+    let client = { 'name': 'anonymous '.concat(tempAnimal)};
     clientMap[socket.id] = client;
     nsp.emit('clients', clientMap); //emits list of players in the namespace
 
@@ -70,8 +76,15 @@ function create_room(id) {
       console.log(`${id}:${socket.id} disconnected`);
 
       // removes the player from host if they were
-      if (rooms[id]['host'] === socket.id) {//TODO reassign host randomly
-        rooms[id]['host'] = '';
+      if (rooms[id]['host'] === socket.id) {//reassign host randomly
+        let clientList = rooms[id]['clients'].keys();
+        let randomIndex = Math.floor(Math.random() * clientList.length);
+        let randomHost = clientList[randomIndex];
+        rooms[id]['host'] = randomHost;
+        console.log(`new host randomly assigned to id: ${randomHost}`);
+
+        //revert to old
+        //rooms[id]['host'] = ''
       }
     });
 
@@ -115,7 +128,8 @@ function create_room(id) {
     });
 
     socket.on("get_host", () => {//host getter
-      socket.emit("host",{id: socket.id, name: rooms[id]['clients'][socket.id]['name']});
+      let hostID = rooms[id]['host'];
+      socket.emit("host",{id: hostID, name: rooms[id]['clients'][hostID]['name']});
     });
 
     /* GAME LOGIC */
