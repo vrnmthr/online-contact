@@ -22,6 +22,7 @@ export default class Game extends Component {
             endpoint: "http://localhost:9000",
 
             // game state variables
+            mode: 'classic',
             clients: {},
             state: 'pending',
             rounds: 3,
