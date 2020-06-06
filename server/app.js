@@ -70,7 +70,7 @@ function create_room(id) {
       console.log(`${id}:${socket.id} disconnected`);
 
       // removes the player from host if they were
-      if (rooms[id]['host'] === socket.id) {
+      if (rooms[id]['host'] === socket.id) {//TODO reassign host randomly
         rooms[id]['host'] = '';
       }
     });
@@ -112,6 +112,10 @@ function create_room(id) {
       } else {
         console.log("host already exists");
       }
+    });
+
+    socket.on("get_host", () => {//host getter
+      socket.emit("host",{id: socket.id, name: rooms[id]['clients'][socket.id]['name']});
     });
 
     /* GAME LOGIC */
