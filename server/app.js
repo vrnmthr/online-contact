@@ -33,7 +33,7 @@ function create_room(id) {
   const nsp = io.of(`/rooms/${id}`);
 
   // create room object and add
-  roomObject  = {
+  roomObject = {
     'mode': 'classic',
     'host': '',
     'id': id,
@@ -54,14 +54,14 @@ function create_room(id) {
   nsp.on('connection', function (socket) {
     console.log(`socket connected to room ${id}`);
 
-    let roomObject = rooms[id] ;
+    let roomObject = rooms[id];
 
     // send the full game state to the new client
     socket.emit('state', roomObject);
 
     // add yourself to the client list and update all players
-    let clientMap = roomObject ['clients'];
-    let animalList = roomObject ['animals'];
+    let clientMap = roomObject['clients'];
+    let animalList = roomObject['animals'];
     let randomIndex = Math.floor(Math.random() * animalList.length);
     let tempAnimal = animalList.splice(randomIndex,1);
     let client = { 'name': 'anonymous '.concat(tempAnimal)};
@@ -70,21 +70,21 @@ function create_room(id) {
 
     //Player leaves game (leaving site)
     socket.on('disconnect', () => {
-      let clientMap = roomObject ['clients'];
+      let clientMap = roomObject['clients'];
       delete clientMap[socket.id];
       nsp.emit('clients', clientMap); //emits list of players in the namespace
       console.log(`${id}:${socket.id} disconnected`);
 
       // removes the player from host if they were
-      if (roomObject ['host'] === socket.id) {//reassign host randomly
-        let clientList = roomObject ['clients'].keys();
+      if (roomObject['host'] === socket.id) {//reassign host randomly
+        let clientList = roomObject['clients'].keys();
         let randomIndex = Math.floor(Math.random() * clientList.length);
         let randomHost = clientList[randomIndex];
-        roomObject ['host'] = randomHost;
+        roomObject['host'] = randomHost;
         console.log(`new host randomly assigned to id: ${randomHost}`);
 
         //revert to old
-        //roomObject ['host'] = ''
+        //roomObject['host'] = ''
       }
     });
 
@@ -92,7 +92,7 @@ function create_room(id) {
     socket.on("edit_name", (args) => {
       //update rooms, replace name
       let newName = args['name'];
-      let clientMap = roomObject ['clients'];
+      let clientMap = roomObject['clients'];
       clientMap[socket.id]['name'] = newName;
       nsp.emit('clients', clientMap); //emits list of players in the namespace
       console.log(`${id}:${socket.id} changed name to ${newName}`);
@@ -100,27 +100,27 @@ function create_room(id) {
 
     // edit round for a room
     socket.on("set_rounds", (rounds) => {
-      roomObject ['rounds'] = rounds;
+      roomObject['rounds'] = rounds;
       console.log(`${id}: set rounds to ${rounds}`);
     });
 
     // edit timeout for a room
     socket.on("set_timeout", (timeout) => {
-      roomObject ["timeout"] = timeout;
-      roomObject ["counter"] = timeout;
+      roomObject["timeout"] = timeout;
+      roomObject["counter"] = timeout;
       console.log(`${id}: set timeout to ${timeout}`);
     });
 
     // set the game mode
     socket.on("set_mode", (mode) => {
-      roomObject ["mode"] = mode;
+      roomObject["mode"] = mode;
       console.log(`${id}: set mode to ${mode}`);
     });
 
     // set host for a room
     socket.on("set_host", () => {
-      if (roomObject ['host'] === '') {
-        roomObject ['host'] = socket.id;
+      if (roomObject['host'] === '') {
+        roomObject['host'] = socket.id;
         console.log(`set host to ${socket.id}`);
       } else {
         console.log("host already exists");
@@ -128,8 +128,8 @@ function create_room(id) {
     });
 
     socket.on("get_host", () => {//host getter
-      let hostID = roomObject ['host'];
-      socket.emit("host",{id: hostID, name: roomObject ['clients'][hostID]['name']});
+      let hostID = roomObject['host'];
+      socket.emit("host",{id: hostID, name: roomObject['clients'][hostID]['name']});
     });
 
     /* GAME LOGIC */
@@ -142,7 +142,7 @@ function create_room(id) {
         console.log(`time remaining: ${clue.counter}`);
         // time over for this clue. remove it from the queue and get rid of the timer
         if (clue.counter <= 0) {
-          let clueQ = roomObject ['clueQueue'];
+          let clueQ = roomObject['clueQueue'];
           clueQ.shift();
           clearInterval(clueTimer);
         }
@@ -157,39 +157,39 @@ function create_room(id) {
       let INTERVAL = 100;
 
       let clueDaemon = setInterval(function () {
-        let clueQ = roomObject ['clueQueue'];
-        let currClue = roomObject ['currClue'];
+        let clueQ = roomObject['clueQueue'];
+        let currClue = roomObject['currClue'];
         // if queue has a clue at the head that is not the current clue then send it out!
         if (clueQ.length >= 1 && clueQ[0].id !== currClue.id) {
           console.log("new clue in play");
           let newClue = clueQ[0];
-          roomObject ['currClue'] = newClue;
+          roomObject['currClue'] = newClue;
           nsp.emit('clue', newClue);
           startClueTimer(newClue);
         }
       }, INTERVAL);
 
-      roomObject ['clueDaemon'] = clueDaemon;
+      roomObject['clueDaemon'] = clueDaemon;
     }
 
     function stopClueDaemon() {
-      let clueDaemon = roomObject ['clueDaemon'];
+      let clueDaemon = roomObject['clueDaemon'];
       clearInterval(clueDaemon);
-      roomObject ['clueDaemon'] = null;
+      roomObject['clueDaemon'] = null;
     }
 
     //start game after required setup
     socket.on('start_req', () => {
       // randomize cluemaster order
       let newCluemasterOrder = [];
-      let clientMap = roomObject ['clients'];
+      let clientMap = roomObject['clients'];
       for (const clientID in clientMap) {
         newCluemasterOrder.push(clientID);
       }
       newCluemasterOrder.sort(() => Math.random() - 0.5);
-      roomObject ['cluemaster'] = newCluemasterOrder;
+      roomObject['cluemaster'] = newCluemasterOrder;
 
-      roomObject ['state'] = 'active';
+      roomObject['state'] = 'active';
       nsp.emit('start_game', {});
 
       //inform players of current cluemaster (first one)
@@ -201,7 +201,7 @@ function create_room(id) {
     //cluemaster submits word
     socket.on('word', (args) => {
       let newWord = { word: args['word'], progress: 0 };
-      roomObject ['currWord'] = newWord;
+      roomObject['currWord'] = newWord;
 
       // start the clueDaemon and start the phase
       startClueDaemon();
@@ -213,7 +213,7 @@ function create_room(id) {
       let newClue = args['clue'];
       let newAns = args['ans'];
       let fromID = socket.id;
-      let currWordDict = roomObject ['currWord'];
+      let currWordDict = roomObject['currWord'];
 
       if (newClue[0].equals(currWordDict['word'][currWordDict['progress']])) { //clue first letter matches progrress in word
 
@@ -224,7 +224,7 @@ function create_room(id) {
         from: fromID,
         solvedBy: null,
         timer: null,
-        counter = roomObject ['timeout'],
+        counter: roomObject['timeout'],
       };
 
       clueQueue.push(newClueDict);
@@ -238,29 +238,29 @@ function create_room(id) {
     //someone guessed the clue correctly
     socket.on('correct', (args) => {
 
-      let currClue = roomObject .currClue;
+      let currClue = roomObject.currClue;
       if (currClue.solvedBy !== null) {
         socket.emit("already_answered", {});
       } else {
         currClue.solvedBy = socket.id;
 
         // tell everyone about correct answer
-        nsp.emit("correct", { id: socket.id, name: roomObject [clients][socket.id]['name'] })
+        nsp.emit("correct", { id: socket.id, name: roomObject[clients][socket.id]['name'] })
         // stop timer and reset queue for the next phase
         clearInterval(currClue.timer);
-        roomObject .clueQueue = [];
-        roomObject .currWord.progress++;
+        roomObject.clueQueue = [];
+        roomObject.currWord.progress++;
 
         // go to the next turn if the word has been guessed
-        if (roomObject ['currWord']['progress'] >= roomObject ['currWord']['word'].length) {
+        if (roomObject['currWord']['progress'] >= roomObject['currWord']['word'].length) {
           // select new clue master
-          let cluemasterIx = ++roomObject .curCluemaster;
+          let cluemasterIx = ++roomObject.curCluemaster;
           // if we have completed a whole round, increment appropriately
-          if (cluemasterIx > Object.keys(roomObject .clients).length) {
-            roomObject .curCluemaster = 0;
-            roomObject .curRound++;
+          if (cluemasterIx > Object.keys(roomObject.clients).length) {
+            roomObject.curCluemaster = 0;
+            roomObject.curRound++;
           }
-          let cluemaster = roomObject .cluemaster[cluemasterIx];
+          let cluemaster = roomObject.cluemaster[cluemasterIx];
           let name = clientMap[cluemaster];
           nsp.emit('start_turn', { id: cluemaster, name: name });
 
@@ -268,7 +268,7 @@ function create_room(id) {
           stopClueDaemon();
         } else {
           // word has not been guessed so we just continue with the new progress
-          nsp.emit('start_phase', roomObject .currWord);
+          nsp.emit('start_phase', roomObject.currWord);
         }
       }
 
