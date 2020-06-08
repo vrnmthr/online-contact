@@ -224,7 +224,7 @@ function create_room(id) {
         from: fromID,
         solvedBy: null,
         timer: null,
-        counter: roomObject['timeout'],
+        counter: roomObject['timeout']
       };
 
       clueQueue.push(newClueDict);
