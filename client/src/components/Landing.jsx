@@ -43,7 +43,7 @@ export default class Landing extends Component {
                 console.log("room exists");
                 this.setState({ wrongCode: false })
                 this.props.history.push(`/rooms/${this.state.code}`);
-                
+
             } else {
                 console.log("room does not exist");
                 this.setState({ wrongCode: true })
@@ -81,50 +81,50 @@ export default class Landing extends Component {
                 </div>
 
                 <div className="Join_Create">
-                    <Button className="one btn-choose"  onClick={this.createGame}>Create Game</Button>
+                    <Button className="one btn-choose" onClick={this.createGame}>Create Game</Button>
 
-                    <Button variant="primary" className = "two btn-choose" onClick={this.HandleShow}>
+                    <Button variant="primary" className="two btn-choose" onClick={this.HandleShow}>
                         Join Game
                     </Button>
                 </div>
 
 
-                    <div className="modal1">
-                        <>
+                <div className="modal1">
+                    <>
 
-                            <Modal aria-labelledby="contained-modal-title-vcenter" centered show={this.state.show} onHide={this.HandleClose}>
-                                
-                                <Modal.Header closeButton>
-                                    <Modal.Title>Join Existing Game</Modal.Title>
-                                </Modal.Header>
-                                
-                                <Modal.Body>
-                                    <div className="form">
-                                        <form onSubmit={this.onSubmit}>
-                                            <div className="form-group">
-                                                <label>Enter Code: </label>
-                                                <input type="text"
-                                                    required
-                                                    className="form-control"
-                                                    onChange={this.onChangeCode}
-                                                />
-                                            </div>
+                        <Modal aria-labelledby="contained-modal-title-vcenter" centered show={this.state.show} onHide={this.HandleClose}>
 
-                                            <div className="form-group">
-                                                <input type="submit" value="Join" className="btn btn-success btn-choose" />
-                                            </div>
+                            <Modal.Header closeButton>
+                                <Modal.Title>Join Existing Game</Modal.Title>
+                            </Modal.Header>
 
-                                            {this.state.wrongCode ?
-                                            <div className = 'wrong_code'>Wrong Code</div>
+                            <Modal.Body>
+                                <div className="form">
+                                    <form onSubmit={this.onSubmit}>
+                                        <div className="form-group">
+                                            <label>Enter Code: </label>
+                                            <input type="text"
+                                                required
+                                                className="form-control"
+                                                onChange={this.onChangeCode}
+                                            />
+                                        </div>
+
+                                        <div className="form-group">
+                                            <input type="submit" value="Join" className="btn btn-success btn-choose" />
+                                        </div>
+
+                                        {this.state.wrongCode ?
+                                            <div className='wrong_code'>Wrong Code</div>
                                             : null}
 
-                                        </form>
-                                    </div>
-                                </Modal.Body>
-                               
-                            </Modal>
-                        </>
-                    </div>
+                                    </form>
+                                </div>
+                            </Modal.Body>
+
+                        </Modal>
+                    </>
+                </div>
             </div>
         )
     }

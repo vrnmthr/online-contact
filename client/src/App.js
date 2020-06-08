@@ -3,6 +3,7 @@ import { BrowserRouter, Switch, Route, Redirect } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 import Landing from "./components/Landing"
+import Create from "./components/Create";
 import Game from "./components/Game";
 
 
