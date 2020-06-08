@@ -223,7 +223,7 @@ function create_room(id) {
         from: fromID,
         solvedBy: null,
         timer: null,
-        counter = rooms[id]['timeout']
+        counter: rooms[id]['timeout']
       };
 
       clueQueue.push(newClueDict);

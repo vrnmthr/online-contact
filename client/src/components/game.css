@@ -4,10 +4,13 @@
 
 .wrapper-main{
     padding: 2rem;
+    padding-left: 6rem;
+    padding-right: 6rem;
 }
 
 .player-section{
     padding: 2rem;
+    padding-left: 5rem;
     text-align: center;
 }
 
@@ -23,4 +26,10 @@
     background-color: #603CBA;
     border: none;
     border-radius: 15px;
+}
+
+.player-card{
+    margin: 1.5rem;
+    display: flex;
+    align-items: flex-start;
 }

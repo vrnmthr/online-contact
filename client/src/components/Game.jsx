@@ -4,10 +4,17 @@ import Button from 'react-bootstrap/Button';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faUser } from '@fortawesome/free-solid-svg-icons'
+
 
 import './game.css';
 import socketIOClient from "socket.io-client";
 import axios from 'axios'
+
+
+//colors for player profiles
+const colors = ["#3CA3BA", "#4EBA3C", "#E79255", "#BA3C3C", "#3F3CBA"]
 
 export default class Game extends Component {
 
@@ -22,7 +29,6 @@ export default class Game extends Component {
             endpoint: "http://localhost:9000",
 
             // game state variables
-            mode: 'classic',
             clients: {},
             state: 'pending',
             rounds: 3,
@@ -33,6 +39,7 @@ export default class Game extends Component {
             clueQueue: [],
             currWord: '',
             mode: 'classic',
+            host: '',
 
             //client identifier
             name: ''
@@ -71,7 +78,19 @@ export default class Game extends Component {
         //set name
         this.setState({ timeout: e.target.value });
 
-    }
+    }   
+
+
+    // each player card
+
+    playerCard = (name, i) => (
+        <div className = "player-card" key = {i}>
+            <FontAwesomeIcon icon={faUser} size = "3x" style = {{color: colors[i]}}/> 
+            <div style = {{marginLeft: "2rem", marginTop: "0.75rem"}}>
+                <h5>{name}</h5>
+            </div>
+        </div>
+    )
 
 
     createSocket = () => {
@@ -93,7 +112,11 @@ export default class Game extends Component {
             this.setState({ clients: clientMap });
             console.log('clients: ', clientMap);
         });
-
+        
+        //get host
+        // socket.emit('get_host', (host) => {
+        //     this.setState({host: host});
+        // });
 
         // FOR DEVELOPMENT PURPOSES ONLY
         socket.on('update', (text) => {
@@ -119,9 +142,10 @@ export default class Game extends Component {
     render() {
         if (this.state.exists) {
             return (
+                this.state.state === 'pending' ?
                 <div>
                     <div className='header'>
-                        <h1>Your Game ID: {this.state.id}</h1>
+                        <h1 style = {{display: "inline"}}>Your Game ID: </h1> <h1 style = {{color: "#603CBA", display: "inline"}}> {this.state.id}</h1>
                     </div>
 
                     <Container fluid className='wrapper-main'>
@@ -130,12 +154,11 @@ export default class Game extends Component {
                             <Col xs={12} sm={12} md={8} lg={8} className="player-section">
                                 <h2 className="players-header">Players in Game</h2>
                                 <ul style={{ listStyle: "none" }}>
-                                    {Object.keys(this.state.clients).map((client) => {
-                                        return <li><h6>{this.state.clients[client]['name']}</h6></li>
+                                    {Object.keys(this.state.clients).map((client, i) => {
+                                        return this.playerCard(this.state.clients[client]['name'], i)
                                     })}
                                 </ul>
-
-
+                              
                             </Col>
 
                             <Col xs={12} sm={12} md={4} lg={4} className="info-section">
@@ -148,15 +171,16 @@ export default class Game extends Component {
                                         </Form.Group>
                                         <Form.Group controlId="rounds">
                                             <Form.Label>Rounds</Form.Label>
-                                            <Form.Control type="number" placeholder="Rounds" value={this.state.rounds} onChange={this.handleChangeRounds} />
+                                            <Form.Control readOnly = {!(this.state.host === this.state.socket.id)} type="number" placeholder="Rounds" value={this.state.rounds} onChange={this.handleChangeRounds} />
                                         </Form.Group>
                                         <Form.Group controlId="timeout">
-                                            <Form.Label>Timeout</Form.Label>
-                                            <Form.Control type="number" placeholder="Timeout" value={this.state.timeout} onChange={this.handleChangeTimeout} />
+                                            <Form.Label>Timeout (in seconds)</Form.Label>
+                                            <Form.Control readOnly = {!(this.state.host === this.state.socket.id)} type="number" placeholder="Timeout" value={this.state.timeout} onChange={this.handleChangeTimeout} />
                                         </Form.Group>
 
                                         <div key={`custom-radio`} className="mb-3">
                                             <Form.Check
+                                                disabled = {!(this.state.host === this.state.socket.id)}
                                                 custom
                                                 inline
                                                 type='radio'
@@ -170,6 +194,7 @@ export default class Game extends Component {
 
                                             <Form.Check
                                                 custom
+                                                disabled = {!(this.state.host === this.state.socket.id)}
                                                 inline
                                                 type='radio'
                                                 checked={this.state.mode == 'group'}
@@ -190,9 +215,21 @@ export default class Game extends Component {
 
                         </Row>
 
+                        <div style = {{textAlign: "center"}}>
+                                <Button variant="primary" className='btns' onClick = {() => this.setState({state: 'active'})}> Start Game
+                                </Button>
+                            </div>
+
                     </Container>
 
                 </div>
+                : 
+                
+                <div>
+                    <h1>Game Page</h1>
+
+                </div>
+                                
             )
         } else {
             return (
