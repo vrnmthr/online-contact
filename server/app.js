@@ -68,6 +68,15 @@ function create_room(id) {
     clientMap[socket.id] = client;
     nsp.emit('clients', clientMap); //emits list of players in the namespace
 
+    //call when game is over
+    function deleteRoom(){
+      nsp.emit('delete_room',{});
+      if(roomObject['clueDaemon'] != null){
+        roomObject['clueDaemon'] = null;
+      }
+      delete roomObject;
+    }
+
     //Player leaves game (leaving site)
     socket.on('disconnect', () => {
       let clientMap = roomObject['clients'];
@@ -85,6 +94,10 @@ function create_room(id) {
 
         //revert to old
         //roomObject['host'] = ''
+      }
+
+      if(Object.keys(roomObject['clients']).length == 0){ // all players left
+        deleteRoom();
       }
     });
 
@@ -253,13 +266,18 @@ function create_room(id) {
 
         // go to the next turn if the word has been guessed
         if (roomObject['currWord']['progress'] >= roomObject['currWord']['word'].length) {
+
+
+
           // select new clue master
           let cluemasterIx = ++roomObject.curCluemaster;
           // if we have completed a whole round, increment appropriately
           if (cluemasterIx > Object.keys(roomObject.clients).length) {
             roomObject.curCluemaster = 0;
             roomObject.curRound++;
-          }
+            if (roomObject.curRound >= roomObject.rounds) {//rounds done so game over
+              deleteRoom();
+            }
           let cluemaster = roomObject.cluemaster[cluemasterIx];
           let name = clientMap[cluemaster];
           nsp.emit('start_turn', { id: cluemaster, name: name });
@@ -274,9 +292,13 @@ function create_room(id) {
 
     });
 
+
+
   });
 
   console.log(`created room with id ${id}`);
+
+  
 
 
 
