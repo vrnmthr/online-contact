@@ -88,7 +88,7 @@ function create_room(id) {
       if(Object.keys(roomObject['clients']).length == 0){ // all players left
         deleteRoom();
       } else if (roomObject['host'] === socket.id) {//reassign host randomly
-        let clientList = roomObject['clients'].keys();
+        let clientList = Object.keys(roomObject['clients']);
         let randomIndex = Math.floor(Math.random() * clientList.length);
         let randomHost = clientList[randomIndex];
         roomObject['host'] = randomHost;
