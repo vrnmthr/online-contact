@@ -33,7 +33,7 @@ function create_room(id) {
   const nsp = io.of(`/rooms/${id}`);
 
   // create room object and add
-  roomObject = {
+  rooms[id] = {
     'mode': 'classic',
     'host': '',
     'id': id,
@@ -55,6 +55,7 @@ function create_room(id) {
     console.log(`socket connected to room ${id}`);
 
     let roomObject = rooms[id];
+    
 
     // send the full game state to the new client
     socket.emit('state', roomObject);
@@ -237,7 +238,7 @@ function create_room(id) {
         from: fromID,
         solvedBy: null,
         timer: null,
-        counter: roomObject['timeout']
+        counter: roomObject.timeout
       };
 
       clueQueue.push(newClueDict);
@@ -289,6 +290,7 @@ function create_room(id) {
           nsp.emit('start_phase', roomObject.currWord);
         }
       }
+    }
 
     });
 
