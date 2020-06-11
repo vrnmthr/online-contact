@@ -85,21 +85,21 @@ function create_room(id) {
       nsp.emit('clients', clientMap); //emits list of players in the namespace
       console.log(`${id}:${socket.id} disconnected`);
 
-      // removes the player from host if they were
-      if (roomObject['host'] === socket.id) {//reassign host randomly
+      if(Object.keys(roomObject['clients']).length == 0){ // all players left
+        deleteRoom();
+      } else if (roomObject['host'] === socket.id) {//reassign host randomly
         let clientList = roomObject['clients'].keys();
         let randomIndex = Math.floor(Math.random() * clientList.length);
         let randomHost = clientList[randomIndex];
         roomObject['host'] = randomHost;
+        nsp.emit("host",{id: randomHost, name: roomObject['clients'][randomHost]['name']});
         console.log(`new host randomly assigned to id: ${randomHost}`);
 
         //revert to old
         //roomObject['host'] = ''
       }
 
-      if(Object.keys(roomObject['clients']).length == 0){ // all players left
-        deleteRoom();
-      }
+      
     });
 
     //When player edits name
