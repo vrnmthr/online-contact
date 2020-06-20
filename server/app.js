@@ -115,6 +115,7 @@ function create_room(id) {
     // edit round for a room
     socket.on("set_rounds", (rounds) => {
       roomObject['rounds'] = rounds;
+      nsp.emit('rounds', rounds); //emits rounds in the namespace
       console.log(`${id}: set rounds to ${rounds}`);
     });
 
@@ -122,12 +123,14 @@ function create_room(id) {
     socket.on("set_timeout", (timeout) => {
       roomObject["timeout"] = timeout;
       roomObject["counter"] = timeout;
+      nsp.emit('timeout', timeout); //emits timeout in the namespace
       console.log(`${id}: set timeout to ${timeout}`);
     });
 
     // set the game mode
     socket.on("set_mode", (mode) => {
       roomObject["mode"] = mode;
+      nsp.emit('mode', mode); //emits mode in the namespace
       console.log(`${id}: set mode to ${mode}`);
     });
 
