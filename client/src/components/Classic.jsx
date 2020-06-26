@@ -35,7 +35,6 @@ const Classic = (props) => {
   const [showClue, setshowClue] = useState(0);
   //clues which are submitted by individual
   const [clue, setClue] = useState({ clue_body: "", ans: "" });
-  //timer representing time left for current clue 
   const [timer, setTimer] = useState(0);
   //represents the current round
   const [curRound, setcurRound] = useState(0);
@@ -183,7 +182,6 @@ const Classic = (props) => {
       );
     }
   };
-
   //submit clue handler
   const submit_clue = () => {
     console.log(clue);
@@ -246,7 +244,6 @@ const Classic = (props) => {
       }
       return <div>Please wait for clue master to submit word</div>;
     }
-
     //if one render letter and progress for not cluemaster
     else if (showClue === 1) {
       if (name === cur_cluemaster.name) {

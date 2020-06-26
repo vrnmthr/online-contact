@@ -11,6 +11,8 @@ var cors = require("cors");
 // key: id, value: room dict
 rooms = {};
 
+var animals = "alligator, anteater, armadillo, auroch, axolotl, badger, bat, bear, beaver, blobfish, buffalo, camel, chameleon, cheetah, chipmunk, chinchilla, chupacabra, cormorant, coyote, crow, dingo, dinosaur, dog, dolphin, dragon, duck, dumbo octopus, elephant, ferret, fox, frog, giraffe, goose, gopher, grizzly, hamster, hedgehog, hippo, hyena, jackal, jackalope, ibex, ifrit, iguana, kangaroo, kiwi, koala, kraken, lemur, leopard, liger, lion, llama, manatee, mink, monkey, moose, narwhal, nyan cat, orangutan, otter, panda, penguin, platypus, python, pumpkin, quagga, quokka, rabbit, raccoon, rhino, sheep, shrew, skunk, slow loris, squirrel, tiger, turtle, unicorn, walrus, wolf, wolverine, wombat"
+animals = animals.split(',');
 // create express app
 var app = express();
 
@@ -18,111 +20,133 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIo(server);
 
-io.on("connection", function (socket) {
+
+io.on('connection', function (socket) {
     console.log("socket connection");
 });
 
 // creates a room with its own namespace and defines socket communication channels over that namespace
 // TOOD: eventually, we want to abstract this logic out of this file because this will become clunky
 function create_room(id) {
+
     // create namespace
     const nsp = io.of(`/rooms/${id}`);
 
     // create room object and add
     rooms[id] = {
-        mode: "classic",
-        host: "",
-        host_name: "",
-        id: id,
-        clients: {},
-        state: "pending",
-        rounds: 3,
-        curRound: 0,
-        cluemaster: [],
-        curCluemaster: 0,
-        timeout: 60,
-        timer: 0,
-        clueQueue: [],
-        currWord: { word: "", progress: 1 }, // progress is the number of letters available
-        counter: 60,
-        currClue: null,
-        clueDaemon: null,
-    };
+        'mode': 'classic',
+        'host': '',
+        'id': id,
+        'clients': {},
+        'state': 'pending',
+        'rounds': 3,
+        'curRound': 0,
+        'cluemaster': [],
+        'curCluemaster': 0,
+        'timeout': 60,
+        'clueQueue': [],
+        'currWord': { word: '', progress: 1 },
+        'currClue': null,
+        'clueDaemon': null,
+        'animals': JSON.parse(JSON.stringify(animals)), //makes a deepcopy
+    }
 
-    nsp.on("connection", function (socket) {
+    nsp.on('connection', function (socket) {
         console.log(`socket connected to room ${id}`);
 
+        let roomObject = rooms[id];
+
+
         // send the full game state to the new client
-        socket.emit("state", rooms[id]);
+        socket.emit('state', roomObject);
 
         // add yourself to the client list and update all players
-        let clientMap = rooms[id]["clients"];
-        let client = { name: "", id: socket.id };
+        let clientMap = roomObject['clients'];
+        let animalList = roomObject['animals'];
+        let randomIndex = Math.floor(Math.random() * animalList.length);
+        let tempAnimal = animalList.splice(randomIndex, 1);
+        let client = { 'name': 'anonymous '.concat(tempAnimal) };
         clientMap[socket.id] = client;
-        nsp.emit("clients", clientMap); //emits list of players in the namespace
+        nsp.emit('clients', clientMap); //emits list of players in the namespace
+
+        //call when game is over
+        function deleteRoom() {
+            nsp.emit('delete_room', {});
+            if (roomObject['clueDaemon'] != null) {
+                roomObject['clueDaemon'] = null;
+            }
+            delete roomObject;
+        }
 
         //Player leaves game (leaving site)
-        socket.on("disconnect", () => {
-            let clientMap = rooms[id]["clients"];
+        socket.on('disconnect', () => {
+            let clientMap = roomObject['clients'];
             delete clientMap[socket.id];
-            nsp.emit("clients", clientMap); //emits list of players in the namespace
+            nsp.emit('clients', clientMap); //emits list of players in the namespace
             console.log(`${id}:${socket.id} disconnected`);
 
-            // removes the player from host if they were
-            if (rooms[id]["host"] === socket.id) {
-                //TODO reassign host randomly
-                rooms[id]["host"] = "";
+            if (Object.keys(roomObject['clients']).length == 0) { // all players left
+                deleteRoom();
+            } else if (roomObject['host'] === socket.id) {//reassign host randomly
+                let clientList = Object.keys(roomObject['clients']);
+                let randomIndex = Math.floor(Math.random() * clientList.length);
+                let randomHost = clientList[randomIndex];
+                roomObject['host'] = randomHost;
+                nsp.emit("host", { id: randomHost, name: roomObject['clients'][randomHost]['name'] });
+                console.log(`new host randomly assigned to id: ${randomHost}`);
+
+                //revert to old
+                //roomObject['host'] = ''
             }
+
+
         });
 
         //When player edits name
         socket.on("edit_name", (args) => {
             //update rooms, replace name
-            let newName = args["name"];
-            let clientMap = rooms[id]["clients"];
-            clientMap[socket.id]["name"] = newName;
-            nsp.emit("clients", clientMap); //emits list of players in the namespace
+            let newName = args['name'];
+            let clientMap = roomObject['clients'];
+            clientMap[socket.id]['name'] = newName;
+            nsp.emit('clients', clientMap); //emits list of players in the namespace
             console.log(`${id}:${socket.id} changed name to ${newName}`);
         });
 
         // edit round for a room
         socket.on("set_rounds", (rounds) => {
-            rooms[id]["rounds"] = rounds;
+            roomObject['rounds'] = rounds;
+            nsp.emit('rounds', rounds); //emits rounds in the namespace
             console.log(`${id}: set rounds to ${rounds}`);
         });
 
         // edit timeout for a room
         socket.on("set_timeout", (timeout) => {
-            rooms[id]["timeout"] = timeout;
-            rooms[id]["counter"] = timeout;
+            roomObject["timeout"] = timeout;
+            roomObject["counter"] = timeout;
+            nsp.emit('timeout', timeout); //emits timeout in the namespace
             console.log(`${id}: set timeout to ${timeout}`);
         });
 
         // set the game mode
         socket.on("set_mode", (mode) => {
-            rooms[id]["mode"] = mode;
+            roomObject["mode"] = mode;
+            nsp.emit('mode', mode); //emits mode in the namespace
             console.log(`${id}: set mode to ${mode}`);
         });
 
         // set host for a room
         socket.on("set_host", () => {
-            console.log("set host being called");
-            if (rooms[id]["host"] === "") {
-                rooms[id]["host"] = socket.id;
+            if (roomObject['host'] === '') {
+                roomObject['host'] = socket.id;
                 console.log(`set host to ${socket.id}`);
             } else {
                 console.log("host already exists");
             }
         });
 
-        socket.on("get_host", () => {
-            console.log("get_host being called");
-            rooms[id]["host_name"] = rooms[id]["clients"][rooms[id]["host"]]["name"];
-            console.log(rooms[id]["host_name"]);
-            nsp.emit("host", {
-                id: socket.id,
-                name: rooms[id]["clients"][rooms[id]["host"]]["name"],
-            });
+        socket.on("get_host", () => {//host getter
+            let hostID = roomObject['host'];
+            socket.emit("host", { id: hostID, name: roomObject['clients'][hostID]['name'] });
         });
 
         /* GAME LOGIC */
