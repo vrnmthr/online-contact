@@ -57,12 +57,6 @@ const Classic = (props) => {
   //styling
   const classes = useStyles();
 
-  //timer stuff
-  // const { time, start, pause, reset, isRunning } = useTimer({
-  //   initialTime: 30,
-  //   timerType: "DECREMENTAL",
-  // });
-
   useEffect(() => {
     console.log(clients);
 
@@ -224,10 +218,9 @@ const Classic = (props) => {
 
   //Renders a form for cluemaster to submit word
   const clue_master_word = () => {
-    //if 0 render form and name for clue master
+    // if 0 render form and name for clue master
     if (showClue === 0) {
-      //console.log(name);
-      if (name === cur_cluemaster.name) {
+      if (socket.id === cur_cluemaster.id) {
         return (
           <Form>
             <Form.Group>
@@ -246,7 +239,7 @@ const Classic = (props) => {
     }
     //if one render letter and progress for not cluemaster
     else if (showClue === 1) {
-      if (name === cur_cluemaster.name) {
+      if (socket.id === cur_cluemaster.id) {
         return (
           <div>
             the word you chose is {game_word.word}. the curr progress{" "}

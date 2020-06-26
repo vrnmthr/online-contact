@@ -65,7 +65,7 @@ function create_room(id) {
         let animalList = roomObject['animals'];
         let randomIndex = Math.floor(Math.random() * animalList.length);
         let tempAnimal = animalList.splice(randomIndex, 1);
-        let client = { 'name': 'anonymous '.concat(tempAnimal) };
+        let client = { name: 'anonymous '.concat(tempAnimal), id: socket.id };
         clientMap[socket.id] = client;
         nsp.emit('clients', clientMap); //emits list of players in the namespace
 
@@ -94,12 +94,7 @@ function create_room(id) {
                 roomObject['host'] = randomHost;
                 nsp.emit("host", { id: randomHost, name: roomObject['clients'][randomHost]['name'] });
                 console.log(`new host randomly assigned to id: ${randomHost}`);
-
-                //revert to old
-                //roomObject['host'] = ''
             }
-
-
         });
 
         //When player edits name
@@ -206,8 +201,8 @@ function create_room(id) {
         }
 
         //start game after required setup
-        socket.on("start_req", (host) => {
-            if (host === rooms[id]["host_name"]) {
+        socket.on("start_req", () => {
+            if (socket.id == rooms[id]["host"]) {
                 // randomize cluemaster order
                 let newCluemasterOrder = [];
                 console.log(rooms[id]["clients"]);

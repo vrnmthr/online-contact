@@ -160,10 +160,7 @@ export default class Game extends Component {
   };
 
   start_game = () => {
-    if (this.state.host === this.state.socket.id) {
-      console.log(this.state.host);
-      this.state.socket.emit("start_req", this.state.host);
-    }
+    this.state.socket.emit("start_req");
   };
 
   render() {
