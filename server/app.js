@@ -18,7 +18,7 @@ var app = express();
 var server = http.createServer(app);
 var io = socketIo(server);
 
-io.on("connection", function(socket) {
+io.on("connection", function (socket) {
     console.log("socket connection");
 });
 
@@ -43,13 +43,13 @@ function create_room(id) {
         timeout: 60,
         timer: 0,
         clueQueue: [],
-        currWord: { word: "", progress: 0 },
+        currWord: { word: "", progress: 1 }, // progress is the number of letters available
         counter: 60,
         currClue: null,
         clueDaemon: null,
     };
 
-    nsp.on("connection", function(socket) {
+    nsp.on("connection", function (socket) {
         console.log(`socket connected to room ${id}`);
 
         // send the full game state to the new client
@@ -57,7 +57,7 @@ function create_room(id) {
 
         // add yourself to the client list and update all players
         let clientMap = rooms[id]["clients"];
-        let client = { name: "" };
+        let client = { name: "", id: socket.id };
         clientMap[socket.id] = client;
         nsp.emit("clients", clientMap); //emits list of players in the namespace
 
@@ -126,64 +126,64 @@ function create_room(id) {
         });
 
         /* GAME LOGIC */
-        /*////////////////////////// -----------Vivek
-        Really difficult to combine this function with front_end, 
-        lots of mini bugs, so i moved the timer to the front_end.
-        Since you don't need the backend timer, there's no reason
-        to have to do unnecessary socket calls between backend and front_End.
-        */
-        // // starts a timer for the clue passed in as an argument
-        // function startClueTimer(clue) {
-        //     let clueTimer = setInterval(function() {
-        //         nsp.emit("time", { remaining: clue.counter });
-        //         console.log(`time remaining: ${clue.counter}`);
-        //         // time over for this clue. remove it from the queue and get rid of the timer
-        //         if (clue.counter <= 0) {
-        //             let clueQ = rooms[id]["clueQueue"];
-        //             clueQ.shift();
-        //             clearInterval(clueTimer);
-        //         }
-        //         clue.counter--;
-        //     }, 1000);
+        // starts a timer for the clue passed in as an argument
+        function startClueTimer(clue) {
+            let clueTimer = setInterval(function () {
+                nsp.emit("time", { remaining: clue.counter });
+                // time over for this clue. remove it from the queue and get rid of the timer
+                if (clue.counter <= 0) {
+                    console.log(`time out for current clue.`);
+                    let clueQ = rooms[id]["clueQueue"];
+                    clueQ.shift();
+                    clearInterval(clueTimer);
+                }
+                clue.counter--;
+            }, 1000);
 
-        //     clue.timer = clueTimer;
-        // }
+            clue.timer = clueTimer;
+            console.log("started clue timer");
+        }
 
-        //THis function also not really necessary, moved this logic to front_end
+        function startClueDaemon() {
+            let INTERVAL = 10000;
 
-        // check for new clues to be submitted by players every INTERVAL length
-        // function startClueDaemon() {
-        //     let INTERVAL = 100000;
+            let clueDaemon = setInterval(function () {
+                console.log("checking for new clues");
+                let clueQ = rooms[id]["clueQueue"];
+                let currClue = rooms[id]["currClue"];
 
-        //     let clueDaemon = setInterval(function() {
-        //         let clueQ = rooms[id]["clueQueue"];
-        //         let currClue = rooms[id]["currClue"];
+                // if queue has a clue at the head that is not the current clue then send it out!
+                if (clueQ.length >= 1 && (currClue == null || clueQ[0].id !== currClue.id)) {
+                    console.log("new clue in play");
+                    let newClue = clueQ[0];
+                    rooms[id]["currClue"] = newClue;
+                    // remove properties from the clue that we don't want to send over
+                    nsp.emit("clue", {
+                        id: newClue.id,
+                        clue: newClue.clue,
+                        ans: newClue.ans,
+                        from: newClue.from,
+                    });
+                    startClueTimer(newClue);
+                } else {
+                    console.log("no new clues found");
+                }
 
-        //         // if queue has a clue at the head that is not the current clue then send it out!
-        //         if (clueQ.length >= 1 && clueQ[0].id !== currClue.id) {
-        //             console.log("new clue in play");
-        //             let newClue = clueQ[0];
-        //             rooms[id]["currClue"] = newClue;
-        //             nsp.emit("clue", newClue);
-        //             startClueTimer(newClue);
-        //         }
-        //     }, INTERVAL);
+            }, INTERVAL);
 
-        //     rooms[id]["clueDaemon"] = clueDaemon;
-        // }
+            rooms[id]["clueDaemon"] = clueDaemon;
+            console.log("started clue daemon");
+        }
 
-        // function stopClueDaemon() {
-        //     let clueDaemon = rooms[id]["clueDaemon"];
-        //     clearInterval(clueDaemon);
-        // } -----------------------Vivek
-
+        function stopClueDaemon() {
+            let clueDaemon = rooms[id]["clueDaemon"];
+            clearInterval(clueDaemon);
+            console.log("stopped clue daemon");
+        }
 
         //start game after required setup
         socket.on("start_req", (host) => {
-            console.log("start_req being called");
             if (host === rooms[id]["host_name"]) {
-                console.log(host);
-                console.log("success");
                 // randomize cluemaster order
                 let newCluemasterOrder = [];
                 console.log(rooms[id]["clients"]);
@@ -196,29 +196,25 @@ function create_room(id) {
 
                 rooms[id]["state"] = "active";
                 nsp.emit("start_game", true);
+                console.log("starting game");
 
                 //inform players of current cluemaster (first one)
                 let currCluemasterID = newCluemasterOrder[0];
-                let name = clientMap[currCluemasterID];
-                nsp.emit("start_turn", { id: currCluemasterID, name: name });
+                nsp.emit("start_turn", { cluemaster: clientMap[currCluemasterID] });
+                console.log("starting turn");
             } else {
-                console.log(host);
-                nsp.emit("start_game", false);
+                console.log("cannot start game if not host");
             }
         });
 
         //cluemaster submits word
         socket.on("word", (args) => {
-            //console.log(args.word);
-            let newWord = { word: args["word"], progress: 0 };
-            console.log(newWord);
+            let newWord = { word: args["word"], progress: 1 };
             rooms[id]["currWord"] = newWord;
+            console.log('received new word from cluemaster ', newWord);
 
-            // ---vivek added this, sends back the word currently living on the server
-            nsp.emit("start_phase", {
-                word: newWord,
-                show_clue: 1,
-            });
+            nsp.emit("start_phase", { word: newWord });
+            startClueDaemon();
         });
 
         // add the clue to the queue when someone submits it
@@ -226,90 +222,96 @@ function create_room(id) {
             let newClue = args["clue_body"];
             let newAns = args["ans"].toLowerCase(); //made everything lowercase
             let fromID = socket.id;
-            let currWordDict = rooms[id]["currWord"]
-            let progress_word = "";
-            let progress_ans = "";
-            ///----vivek
+            let currWordDict = rooms[id]["currWord"];
+
+            let newClueDict = {
+                id: uuidv4(),
+                clue: newClue,
+                ans: newAns,
+                from: fromID,
+                solvedBy: null,
+                timer: null,
+                counter: rooms[id]["timeout"],
+            };
+
+            rooms[id].clueQueue.push(newClueDict);
+            console.log("added clue to queue ", newClueDict);
+
+            // REMOVING THIS FOR NOW ... IDEALLY THE CHECK FOR VALID CLUES WILL HAPPEN ON THE FRONTEND
+            // let progress_word = "";
+            // let progress_ans = "";
+
             //earlier the logic was messed up, only checked one part of the word.
             //this fixes it, and makes sure the word is updated
-            if ([currWordDict["progress"]] == 0) {
-                progress_word = currWordDict["word"][currWordDict["progress"]];
-                progress_ans += newAns[currWordDict["progress"]];
-            } else {
-                for (let i = 0; i < [currWordDict["progress"]]; i++) {
-                    progress_word += currWordDict["word"][currWordDict["progress"]];
-                    progress_ans += newAns[currWordDict["progress"]];
-                }
-            }
+            // if ([currWordDict["progress"]] == 0) {
+            // progress_word = currWordDict["word"][currWordDict["progress"]];
+            // progress_ans += newAns[currWordDict["progress"]];
+            // } else {
+            //     for (let i = 0; i < [currWordDict["progress"]]; i++) {
+            //         progress_word += currWordDict["word"][currWordDict["progress"]];
+            //         progress_ans += newAns[currWordDict["progress"]];
+            //     }
+            // }
 
-            progress_ans = progress_ans.toLowerCase();
-            progress_word = progress_word.toLowerCase();
+            // progress_ans = progress_ans.toLowerCase();
+            // progress_word = progress_word.toLowerCase();
 
-            console.log(currWordDict["word"][currWordDict["progress"]]);
+            // console.log(currWordDict["word"][currWordDict["progress"]]);
 
             //checks current progress accurately ---vivek
-            if (progress_ans === progress_word) {
-                //clue first letter matches progrress in word
+            // if (progress_ans === progress_word) {
+            //     //clue first letter matches progrress in word
 
-                let newClueDict = {
-                    id: uuidv4(),
-                    clue: newClue,
-                    ans: newAns,
-                    from: fromID,
-                    solvedBy: null,
-                    timer: null,
-                    counter: rooms[id]["timeout"],
-                };
 
-                rooms[id].clueQueue.push(newClueDict);
-                //now start cluedaemon -- don't need this --vivek
-                //startClueDaemon(); -- don't need this --vivek
-                console.log("reaching here");
-                //--vivek before wasn't sending the new clue back to front_end so added this
-                nsp.emit("clue_queue", (rooms[id].clueQueue));
-            } else {
-                //clue first letter does not match progrress in word
-                socket.emit("invalid_clue", {});
-            }
+            //     // now start cluedaemon
+            //     startClueDaemon();
+            // } else {
+            //     //clue first letter does not match progrress in word
+            //     socket.emit("invalid_clue", {});
+            // }
         });
 
         //someone guessed the clue correctly
-        socket.on("correct", (solved_by) => {
-            ///--deleted a bunch of stuff here, and made it simpler to connect with front_end. solved_by is passed in by front end --vivek
-            console.log(solved_by);
-            //update queue and progress
-            rooms[id].clueQueue = [];
-            rooms[id].currWord.progress++;
-            console.log(rooms[id].currWord.progress);
+        socket.on("correct", (args) => {
 
-            //4. sends back details of word to frontend so we can update it there --vivek
-            nsp.emit("answered_correct", {
-                solvedBy: solved_by,
-                game_word: rooms[id].currWord,
-            });
-            // go to the next turn if the word has been guessed
-            if (
-                rooms[id]["currWord"]["progress"] >=
-                rooms[id]["currWord"]["word"].length
-            ) {
-                // select new clue master
-                let cluemasterIx = ++rooms[id].curCluemaster;
-                // if we have completed a whole round, increment appropriately
-                if (cluemasterIx > Object.keys(rooms[id].clients).length) {
-                    rooms[id].curCluemaster = 0;
-                    rooms[id].curRound++;
+            let clueQ = rooms[id].clueQueue;
+            let clueIsUnsolved = clueQ.length != 0 && clueQ[0].solvedBy == null;
+
+            if (clueIsUnsolved) {
+                // update queue and progress
+                clearInterval(clueQ[0].timer);
+                rooms[id].clueQueue = [];
+                let currWord = rooms[id].currWord;
+                currWord.progress++;
+                nsp.emit("solved", { byId: socket.id });
+                console.log("clue succesfully solved by ", socket.id);
+                console.log("current word progress ", rooms[id].currWord.progress);
+
+                // go to the next turn if the word has been guessed
+                let wordFinished = currWord.progress >= currWord.word.length;
+                if (wordFinished) {
+                    console.log("word finished")
+                    // select new clue master
+                    let cluemasterIx = ++rooms[id].curCluemaster;
+                    // if we have completed a whole round, increment appropriately
+                    if (cluemasterIx >= Object.keys(rooms[id].clients).length) {
+                        rooms[id].curCluemaster = 0;
+                        rooms[id].curRound++;
+                        console.log("starting new round")
+                    }
+                    let cluemaster = rooms[id].cluemaster[rooms[id].curCluemaster];
+                    nsp.emit("start_turn", { cluemaster: clientMap[cluemaster] });
+
+                    // stop the clue daemon since it will be started again when the new cluemaster submits a clue
+                    stopClueDaemon();
+                } else {
+                    nsp.emit("start_phase", { word: currWord });
+                    console.log("starting new phase");
                 }
-                let cluemaster = rooms[id].cluemaster[cluemasterIx];
-                let name = clientMap[cluemaster];
-                nsp.emit("start_turn", { id: cluemaster, name: name });
-
-                // stop the clue daemon since it will be started again when the new cluemaster submits a clue
-                //stopClueDaemon();
             } else {
-                //This else logic screwed things up front_end, if you emit a new_phase
-                //argument again, then everything refreshes, so I commented it out -- vivek
-                // word has not been guessed so we just continue with the new progress
-                //nsp.emit("start_phase", rooms[id].currWord);
+                // clue has already been answered by somebody else
+                socket.emit("already_answered", {});
+                console.log("clue has already been answered");
             }
         });
     });
@@ -352,7 +354,7 @@ ROUTE SETUP
 
 // makes io available as req.io in all request handlers
 // must be placed BEFORE all request handlers
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     req.io = io;
     next();
 });
@@ -361,19 +363,19 @@ app.use(function(req, res, next) {
 const indexRouter = require("./routes/index");
 app.use("/", indexRouter);
 // this is not a modularized router...
-app.get("/test", function(req, res) {
+app.get("/test", function (req, res) {
     res.send("pong");
 });
 
 // Route for creating a new room
-app.get("/rooms/new", function(req, res) {
+app.get("/rooms/new", function (req, res) {
     let newRoomId = uuidv4();
     create_room(newRoomId);
     res.send(newRoomId);
 });
 
 // Route for accessing a room id -- returns 200 if room exists and 404 if not
-app.get("/rooms/exists/:id", function(req, res, next) {
+app.get("/rooms/exists/:id", function (req, res, next) {
     let id = req.params.id;
     if (id in rooms) {
         res.send("true");
@@ -383,7 +385,7 @@ app.get("/rooms/exists/:id", function(req, res, next) {
 });
 
 // CHECKING TOOL, send updates to all sockets in each namespace every second
-setInterval(function() {
+setInterval(function () {
     for (const id in rooms) {
         const nsp = io.of(`/rooms/${id}`);
         nsp.emit("update", `in room ${id}`);
