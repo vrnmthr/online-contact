@@ -56,7 +56,6 @@ export default class Game extends Component {
     this.state.socket.emit("set_rounds", this.state.rounds);
     this.state.socket.emit("set_timeout", this.state.timeout);
     this.state.socket.emit("set_mode", this.state.mode);
-    
   }
 
   handleChangeName(e) {
@@ -102,25 +101,25 @@ export default class Game extends Component {
     });
 
     socket.on("rounds", (rounds) => {
-        this.setState({rounds: rounds});
-        console.log("updated rounds: ", this.state.rounds);
+      this.setState({ rounds: rounds });
+      console.log("updated rounds: ", this.state.rounds);
     });
 
     socket.on("timeout", (timeout) => {
-        this.setState({timeout: timeout});
-        console.log("updated timeout: ", this.state.timeout);
+      this.setState({ timeout: timeout });
+      console.log("updated timeout: ", this.state.timeout);
     });
 
     socket.on("mode", (mode) => {
-        this.setState({mode: mode});
-        console.log("updated mode: ", this.state.mode);
+      this.setState({ mode: mode });
+      console.log("updated mode: ", this.state.mode);
     });
 
     //get host
     this.state.socket.emit("get_host");
     //set host
     this.state.socket.on("host", (args) => {
-    
+
       this.setState({ host: args.id }, () => {
         console.log(this.state.socket.id)
         console.log(this.state.host);
@@ -161,10 +160,7 @@ export default class Game extends Component {
   };
 
   start_game = () => {
-    if (this.state.host === this.state.socket.id) {
-      console.log(this.state.host);
-      this.state.socket.emit("start_req", this.state.host);
-    }
+    this.state.socket.emit("start_req");
   };
 
   render() {
@@ -260,8 +256,9 @@ export default class Game extends Component {
               </Col>
             </Row>
 
-            <div style={{ textAlign: "center" ,
-             display: this.state.host === this.state.socket.id ? 'block': 'none'
+            <div style={{
+              textAlign: "center",
+              display: this.state.host === this.state.socket.id ? 'block' : 'none'
             }}>
               <Button
                 variant="primary"
@@ -275,20 +272,20 @@ export default class Game extends Component {
           </Container>
         </div>
       ) : (
-        <div>
-          <Classic
-            socket={this.state.socket}
-            id={this.state.id}
-            endpoint={this.state.endpoint}
-            clients={this.state.clients}
-            rounds={this.state.rounds}
-            timeout={this.state.timeout}
-            host={this.state.host}
-            name={this.state.name}
-            mode={this.state.mode}
-          />
-        </div>
-      );
+          <div>
+            <Classic
+              socket={this.state.socket}
+              id={this.state.id}
+              endpoint={this.state.endpoint}
+              clients={this.state.clients}
+              rounds={this.state.rounds}
+              timeout={this.state.timeout}
+              host={this.state.host}
+              name={this.state.name}
+              mode={this.state.mode}
+            />
+          </div>
+        );
     } else {
       return (
         <div style={{ textAlign: "center", padding: "2rem" }}>
